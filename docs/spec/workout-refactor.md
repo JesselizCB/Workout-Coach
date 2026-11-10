@@ -1,18 +1,18 @@
 # Especificación: evolución de Workout Coach
 
-> **Estado:** en elaboración. Este documento se actualiza si una decisión cambia durante el desarrollo.
+> **Estado:** en elaboración. Voy actualizando este documento cada vez que cambia una decisión.
 
 ## 1. Contexto y problema
 
 ### 1.1 Contexto
 
-Workout Coach es una aplicación Angular 20 que guía una sesión de entrenamiento con temporizadores de repetición y descanso. Hoy gestiona un solo ejercicio y concentra casi toda su lógica en un componente.
+Workout Coach es una aplicación en Angular 20 que acompaña una sesión de entrenamiento: cuenta el tiempo de cada repetición, marca los descansos y avisa cuando toca cambiar. Hoy solo maneja un ejercicio, y casi toda su lógica vive dentro de un único componente.
 
-El objetivo no es reconstruirla, sino evolucionarla sin romper su comportamiento: separar responsabilidades, hacerla testeable e incorporar el entrenamiento completo con una lista de ejercicios.
+La app funciona, así que reescribirla desde cero sería tirar algo que sirve. Lo que busco es que siga funcionando mientras la ordeno por dentro: separar responsabilidades, poder probarla y, sobre esa base, añadir el entrenamiento completo con una lista de ejercicios.
 
 ### 1.2 Estado inicial de la base
 
-El código recibido no compilaba ni ejecutaba tal como se entregó. Antes de cualquier refactor se aplicaron reparaciones mínimas, sin modificar la lógica de la aplicación.
+Lo primero que encontré es que el código recibido no compilaba ni arrancaba. Antes de tocar la arquitectura hice solo las reparaciones imprescindibles, sin cambiar una sola línea de la lógica:
 
 | Problema | Síntoma | Reparación | Commit |
 |---|---|---|---|
@@ -22,9 +22,11 @@ El código recibido no compilaba ni ejecutaba tal como se entregó. Antes de cua
 | Falta `@types/jasmine` | Los tests no compilan | Instalarlo como dependencia de desarrollo | `eb1ed61` |
 | `test` sin `polyfills` | Error `NG0908` en los tests | Declarar `zone.js` y `zone.js/testing` | `eb1ed61` |
 
-Tras estas reparaciones, `npm run build`, `npm start` y `npm test` funcionan.
+Con eso, `npm run build`, `npm start` y `npm test` funcionan, y hay una base estable desde la que empezar.
 
 ### 1.3 Problemas de diseño
+
+Con la app en marcha aparecen varios problemas de diseño. Ninguno impide que funcione hoy, pero todos hacen más difícil cambiarla sin romper algo:
 
 | Problema | Evidencia | Consecuencia |
 |---|---|---|
@@ -40,6 +42,8 @@ Tras estas reparaciones, `npm run build`, `npm start` y `npm test` funcionan.
 
 ### 1.4 Defectos funcionales detectados
 
+Al revisar el componente también aparecen tres fallos de comportamiento. El primero es el más serio, porque permite pasarse del número de repeticiones:
+
 | Defecto | Causa | Efecto |
 |---|---|---|
 | El entrenamiento puede continuar tras finalizar | Al terminar, `running` vuelve a `false` y `start()` no comprueba si la sesión acabó | Pulsar Start de nuevo lleva el contador a `4 / 3` |
@@ -48,9 +52,11 @@ Tras estas reparaciones, `npm run build`, `npm start` y `npm test` funcionan.
 
 ### 1.5 Limitación funcional
 
-La aplicación solo admite un ejercicio. No existe una lista, ni estados por ejercicio, ni avance automático entre ejercicios, que son el núcleo de la nueva funcionalidad.
+Por último, la app solo sabe manejar un ejercicio. No hay lista, ni estado por ejercicio, ni paso automático al siguiente, y eso es justo lo que pide la nueva funcionalidad.
 
 ## 2. Alcance y fuera de alcance
+
+El reto deja claro que prefiere poco y bien hecho antes que mucho y a medias. Por eso esta sección dice qué entra y, con el mismo cuidado, qué dejo fuera y por qué.
 
 ### 2.1 Dentro del alcance
 
@@ -91,6 +97,8 @@ La aplicación solo admite un ejercicio. No existe una lista, ni estados por eje
 
 ### 2.2 Fuera del alcance
 
+Cada cosa que dejo fuera tiene su motivo:
+
 | Elemento | Motivo |
 |---|---|
 | Implementar Module o Native Federation | El reto solo pide su diseño |
@@ -103,7 +111,7 @@ La aplicación solo admite un ejercicio. No existe una lista, ni estados por eje
 
 ## 3. Modelo de dominio
 
-El dominio es TypeScript puro: no importa Angular ni conoce temporizadores reales. Modela la sesión como una **máquina de estados inmutable**: cada operación recibe una sesión y devuelve una nueva.
+El dominio es TypeScript puro. No importa nada de Angular y no sabe lo que es un temporizador real: para él, el tiempo avanza cuando alguien llama a `tick`. La sesión se modela como una **máquina de estados inmutable**, así que cada operación recibe una sesión y devuelve otra nueva en vez de modificarla.
 
 ### 3.1 Tipos
 
@@ -135,11 +143,11 @@ interface WorkoutSession {
 }
 ```
 
-`lastEvent` registra la última transición relevante. La capa `presentation` la convierte en el texto de la notificación (decisión D2).
+`lastEvent` guarda la última transición importante, por ejemplo que acaba de empezar un descanso. Qué texto mostrar en ese caso lo decide `presentation` (decisión D2).
 
 ### 3.2 Invariantes
 
-Una sesión solo se crea con datos válidos. En caso contrario se lanza un error de dominio.
+Una sesión solo se puede crear con datos válidos. Si algo no cuadra, se lanza un error de dominio y la sesión no llega a existir:
 
 - La lista contiene al menos un ejercicio.
 - `repetitions`, `repetitionSeconds` y `restSeconds` son enteros mayores o iguales a 1.
@@ -154,7 +162,7 @@ Una sesión solo se crea con datos válidos. En caso contrario se lanza un error
 | `reset` | Cualquiera | El mismo estado que `createSession` |
 | `tick` | `running` | Avanza un segundo, según la sección 3.4 |
 
-Cualquier operación fuera de los estados indicados devuelve la sesión sin cambios. Así, `start` sobre una sesión `finished` no tiene efecto, lo que corrige el defecto `4 / 3` de la sección 1.4.
+Si una operación llega en un estado que no le corresponde, la sesión se devuelve tal cual. Es una regla simple, pero es la que corrige el defecto `4 / 3` de la sección 1.4: pulsar Iniciar con la sesión en `finished` ya no hace nada.
 
 ### 3.4 Transiciones de `tick`
 
@@ -166,11 +174,11 @@ Cualquier operación fuera de los estados indicados devuelve la sesión sin camb
 | `rest` | 1 | Última repetición, quedan ejercicios | Avanza `currentIndex`, reinicia `completedRepetitions` y pasa a `repetition` con el tiempo del siguiente ejercicio | `exercise-completed` |
 | `rest` | 1 | Última repetición del último ejercicio | Suma la repetición, `status` pasa a `finished` y `remainingSeconds` a 0 | `workout-completed` |
 
-Cada repetición, incluida la última de un ejercicio, termina con su descanso, ya que el criterio de aceptación incrementa la repetición completada al terminar el descanso.
+Un detalle que conviene tener presente: cada repetición termina con su descanso, también la última de cada ejercicio. Lo exige el criterio de aceptación, que suma la repetición completada justo al terminar el descanso.
 
 ### 3.5 Estado de cada ejercicio
 
-El estado de un ejercicio **se deriva** de la sesión y no se almacena, de modo que no puede contradecirla.
+El estado de cada ejercicio no se guarda en ningún sitio: **se calcula** a partir de la sesión. Así es imposible que la lista diga una cosa y la sesión otra.
 
 | Condición | `ExerciseStatus` |
 |---|---|
@@ -183,6 +191,8 @@ El estado de un ejercicio **se deriva** de la sesión y no se almacena, de modo 
 ## 4. Capas y contratos
 
 ### 4.1 Estructura
+
+La feature queda organizada así:
 
 ```text
 src/app/features/workout/
@@ -211,18 +221,20 @@ src/app/features/workout/
 └─ workout.providers.ts
 ```
 
-Las carpetas legacy `components/` y `services/` se eliminan al completar la migración.
+Cuando termine la migración, las carpetas legacy `components/` y `services/` desaparecen.
 
 ### 4.2 Reglas de dependencia
+
+La regla de oro es que las dependencias siempre apuntan hacia el dominio:
 
 | Capa | Puede importar | No puede importar |
 |---|---|---|
 | `domain` | Nada externo | Angular, RxJS, otras capas |
 | `application` | `domain`, Angular | `infrastructure`, `presentation` |
-| `infrastructure` | `domain` | `application`, `presentation` |
+| `infrastructure` | `domain`, Angular | `application`, `presentation` |
 | `presentation` | `application`, `domain`, Angular | `infrastructure` |
 
-`workout.providers.ts` es la **raíz de composición**: el único archivo que conoce las implementaciones concretas y las asocia a sus puertos. Queda fuera de las cuatro capas y se registra en la configuración de la aplicación.
+Queda una pregunta: si `presentation` no puede ver `infrastructure`, ¿quién conecta cada puerto con su implementación? Lo hace `workout.providers.ts`, la **raíz de composición**. Es el único archivo que conoce las implementaciones concretas, vive fuera de las cuatro capas y se registra en la configuración de la aplicación.
 
 ### 4.3 Puertos
 
@@ -237,13 +249,15 @@ abstract class Ticker {
 }
 ```
 
-- Son clases abstractas porque, a diferencia de una interface, existen en ejecución y sirven como token de inyección sin que el dominio importe Angular.
-- `getExercises` devuelve una `Promise`, de modo que sustituir el mock por una API real no cambia el contrato.
-- `Ticker` aísla el reloj real. Los tests usan un `Ticker` falso y avanzan el tiempo manualmente, sin depender de `fakeAsync` (decisión D1).
+Uso clases abstractas en lugar de interfaces por un motivo práctico: una interface desaparece al compilar, mientras que una clase abstracta sigue existiendo y Angular puede usarla como token de inyección. Así el dominio define sus puertos sin importar nada de Angular.
+
+`getExercises` devuelve una `Promise` aunque hoy el mock responda al instante. El día que llegue una API real, el contrato será el mismo.
+
+`Ticker` envuelve el reloj real. En los tests lo cambio por uno falso y avanzo el tiempo a mano, sin esperar segundos reales y sin depender de `fakeAsync` (decisión D1).
 
 ### 4.4 Infraestructura
 
-El DTO conserva el formato externo y se traduce al modelo de dominio únicamente en esta capa.
+El DTO respeta el formato que llega de fuera, en `snake_case`, y se traduce al modelo de dominio en esta capa. Ninguna otra llega a verlo:
 
 ```ts
 interface ExerciseDto {
@@ -263,9 +277,9 @@ interface ExerciseDto {
 
 ### 4.5 Aplicación
 
-`LoadWorkoutUseCase` obtiene los ejercicios del repositorio y crea la sesión inicial. Los errores de carga o de datos inválidos llegan a quien lo invoca.
+`LoadWorkoutUseCase` pide los ejercicios al repositorio y crea con ellos la sesión inicial. Si la carga falla o los datos no son válidos, deja que el error llegue a quien lo llamó, que es quien sabe qué mostrar.
 
-`WorkoutSessionStore` mantiene el estado en Signals y coordina el dominio con el `Ticker`. Se provee a nivel del container, por lo que su ciclo de vida coincide con el de la pantalla y detiene el `Ticker` al destruirse.
+`WorkoutSessionStore` guarda el estado en Signals y hace de puente entre el dominio y el `Ticker`. Lo proveo en el container, así que nace y muere con la pantalla, y al destruirse detiene el `Ticker`.
 
 ```ts
 type LoadStatus = 'loading' | 'ready' | 'error';
@@ -282,7 +296,7 @@ class WorkoutSessionStore {
 }
 ```
 
-Iniciar, pausar y reiniciar no se separan en clases propias: cada una sería una sola línea que delega en el dominio, y añadirían indirección sin aportar comportamiento.
+Iniciar, pausar y reiniciar son métodos del store y no clases aparte, porque cada una sería una línea que solo llama al dominio (decisión D3).
 
 ## 5. Flujo de datos
 
