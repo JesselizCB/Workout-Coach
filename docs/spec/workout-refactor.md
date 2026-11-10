@@ -604,6 +604,12 @@ Medido en la rama `feat/repetition-progress`, después de añadir la barra de la
 | Navegador, segunda repetición de Squats | Contador "1 / 3", primer tramo completo en verde, segundo al 38 % y tercero vacío |
 | Navegador, al pasar a Push-ups | Contador "0 / 2" y dos tramos vacíos |
 
+### 10.9 Integración continua y demo publicada
+
+Para que la evidencia no dependa de estas tablas, `.github/workflows/ci.yml` ejecuta en GitHub los mismos comandos en cada push a `main` y en cada Pull Request: `npm ci`, el build y los tests en Chrome sin interfaz. Los resultados, incluido el resumen de cobertura, quedan en los logs de la pestaña Actions del repositorio.
+
+La app se compila una sola vez, con `--base-href /Workout-Coach/`, y ese mismo build es el que se prueba y el que se publica. Cuando `main` pasa las comprobaciones, el workflow lo despliega en GitHub Pages: https://jesselizcb.github.io/Workout-Coach/. La app no tiene backend ni rutas, así que funciona completa como sitio estático.
+
 ## 11. Extensión: microfrontends y NgRx
 
 Esta sección es solo de diseño. Describe cómo evolucionaría la feature si tuviera que vivir dentro de una plataforma más grande, repartida entre varios equipos. Nada de esto se implementa en el reto.
