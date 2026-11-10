@@ -1,6 +1,14 @@
 import { Exercise } from './exercise';
 import { InvalidWorkoutError } from './workout.errors';
-import { createSession, pause, reset, start, tick, WorkoutSession } from './workout-session';
+import {
+  createSession,
+  getExerciseStatuses,
+  pause,
+  reset,
+  start,
+  tick,
+  WorkoutSession,
+} from './workout-session';
 
 const squats: Exercise = { name: 'Squats', repetitions: 3, repetitionSeconds: 5, restSeconds: 3 };
 const pushUps: Exercise = { name: 'Push-ups', repetitions: 2, repetitionSeconds: 4, restSeconds: 2 };
@@ -236,5 +244,49 @@ describe('a complete workout', () => {
 
     expect(actual).toEqual(expected.map((row) => [...row]));
     expect(tick(session)).toBe(session);
+  });
+});
+
+describe('getExerciseStatuses', () => {
+  const lunges: Exercise = { name: 'Lunges', repetitions: 2, repetitionSeconds: 4, restSeconds: 2 };
+
+  function threeExerciseSession(overrides: Partial<WorkoutSession>): WorkoutSession {
+    return { ...createSession([squats, pushUps, lunges]), ...overrides };
+  }
+
+  it('CA1: marks every exercise as pending before the workout starts', () => {
+    expect(getExerciseStatuses(threeExerciseSession({}))).toEqual(['pending', 'pending', 'pending']);
+  });
+
+  it('CA2: marks the first exercise as in progress once started', () => {
+    expect(getExerciseStatuses(threeExerciseSession({ status: 'running' }))).toEqual([
+      'in-progress',
+      'pending',
+      'pending',
+    ]);
+  });
+
+  it('CA5: marks previous exercises as completed and later ones as pending', () => {
+    expect(getExerciseStatuses(threeExerciseSession({ status: 'running', currentIndex: 1 }))).toEqual([
+      'completed',
+      'in-progress',
+      'pending',
+    ]);
+  });
+
+  it('CA7: keeps the current exercise in progress while paused', () => {
+    expect(getExerciseStatuses(threeExerciseSession({ status: 'paused', currentIndex: 1 }))).toEqual([
+      'completed',
+      'in-progress',
+      'pending',
+    ]);
+  });
+
+  it('CA6: marks every exercise as completed when the workout finishes', () => {
+    expect(getExerciseStatuses(threeExerciseSession({ status: 'finished', currentIndex: 2 }))).toEqual([
+      'completed',
+      'completed',
+      'completed',
+    ]);
   });
 });

@@ -67,6 +67,20 @@ export function tick(session: WorkoutSession): WorkoutSession {
   return session.phase === 'repetition' ? startRest(session) : finishRest(session);
 }
 
+export function getExerciseStatuses(session: WorkoutSession): readonly ExerciseStatus[] {
+  return session.exercises.map((_, index) => exerciseStatusAt(session, index));
+}
+
+function exerciseStatusAt(session: WorkoutSession, index: number): ExerciseStatus {
+  if (session.status === 'idle') {
+    return 'pending';
+  }
+  if (session.status === 'finished' || index < session.currentIndex) {
+    return 'completed';
+  }
+  return index === session.currentIndex ? 'in-progress' : 'pending';
+}
+
 function startRest(session: WorkoutSession): WorkoutSession {
   return {
     ...session,
