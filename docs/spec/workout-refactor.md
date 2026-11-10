@@ -101,6 +101,85 @@ La aplicación solo admite un ejercicio. No existe una lista, ni estados por eje
 | Internacionalización | No forma parte de los criterios de aceptación y la interfaz tiene un solo idioma (decisión D2) |
 | Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados y el descanso |
 
+## 3. Modelo de dominio
+
+El dominio es TypeScript puro: no importa Angular ni conoce temporizadores reales. Modela la sesión como una **máquina de estados inmutable**: cada operación recibe una sesión y devuelve una nueva.
+
+### 3.1 Tipos
+
+```ts
+interface Exercise {
+  readonly name: string;
+  readonly repetitions: number;
+  readonly repetitionSeconds: number;
+  readonly restSeconds: number;
+}
+
+type SessionStatus = 'idle' | 'running' | 'paused' | 'finished';
+type Phase = 'repetition' | 'rest';
+type ExerciseStatus = 'pending' | 'in-progress' | 'completed';
+type SessionEvent =
+  | 'rest-started'
+  | 'repetition-started'
+  | 'exercise-completed'
+  | 'workout-completed';
+
+interface WorkoutSession {
+  readonly exercises: readonly Exercise[];
+  readonly status: SessionStatus;
+  readonly currentIndex: number;
+  readonly phase: Phase;
+  readonly remainingSeconds: number;
+  readonly completedRepetitions: number;
+  readonly lastEvent: SessionEvent | null;
+}
+```
+
+`lastEvent` registra la última transición relevante. La capa `presentation` la convierte en el texto de la notificación (decisión D2).
+
+### 3.2 Invariantes
+
+Una sesión solo se crea con datos válidos. En caso contrario se lanza un error de dominio.
+
+- La lista contiene al menos un ejercicio.
+- `repetitions`, `repetitionSeconds` y `restSeconds` son enteros mayores o iguales a 1.
+
+### 3.3 Operaciones
+
+| Operación | Desde | Resultado |
+|---|---|---|
+| `createSession(exercises)` | — | `idle`, primer ejercicio, fase `repetition`, `remainingSeconds` igual a su `repetitionSeconds` |
+| `start` | `idle`, `paused` | `running`, conservando el progreso |
+| `pause` | `running` | `paused`, conservando el progreso |
+| `reset` | Cualquiera | El mismo estado que `createSession` |
+| `tick` | `running` | Avanza un segundo, según la sección 3.4 |
+
+Cualquier operación fuera de los estados indicados devuelve la sesión sin cambios. Así, `start` sobre una sesión `finished` no tiene efecto, lo que corrige el defecto `4 / 3` de la sección 1.4.
+
+### 3.4 Transiciones de `tick`
+
+| Fase | `remainingSeconds` | Condición | Resultado | `lastEvent` |
+|---|---|---|---|---|
+| Cualquiera | Mayor que 1 | — | Resta un segundo | Sin cambios |
+| `repetition` | 1 | — | Pasa a `rest` con `restSeconds` | `rest-started` |
+| `rest` | 1 | Quedan repeticiones | Suma una repetición y vuelve a `repetition` con `repetitionSeconds` | `repetition-started` |
+| `rest` | 1 | Última repetición, quedan ejercicios | Avanza `currentIndex`, reinicia `completedRepetitions` y pasa a `repetition` con el tiempo del siguiente ejercicio | `exercise-completed` |
+| `rest` | 1 | Última repetición del último ejercicio | Suma la repetición, `status` pasa a `finished` y `remainingSeconds` a 0 | `workout-completed` |
+
+Cada repetición, incluida la última de un ejercicio, termina con su descanso, ya que el criterio de aceptación incrementa la repetición completada al terminar el descanso.
+
+### 3.5 Estado de cada ejercicio
+
+El estado de un ejercicio **se deriva** de la sesión y no se almacena, de modo que no puede contradecirla.
+
+| Condición | `ExerciseStatus` |
+|---|---|
+| Sesión `idle` | `pending` para todos |
+| Sesión `finished` | `completed` para todos |
+| Índice menor que `currentIndex` | `completed` |
+| Índice igual a `currentIndex` | `in-progress` |
+| Índice mayor que `currentIndex` | `pending` |
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
