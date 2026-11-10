@@ -323,6 +323,8 @@ Usuario ────────> Presentacional ───────> Containe
 
 Si la carga falla o los datos no son válidos, el store pasa a `error` y la pantalla muestra un mensaje en lugar de la sesión.
 
+Mientras la carga está en curso, el store la registra en `PendingTasks`. Sin `zone.js`, Angular solo espera el trabajo asíncrono que se le declara, así que esto mantiene la aplicación "inestable" hasta que llegan los datos, tanto si la carga sale bien como si falla. Es lo que permite que los tests y un eventual renderizado en servidor esperen a la sesión.
+
 Si se vuelve a cargar con una sesión en marcha, el store detiene antes el `Ticker` y descarta la sesión anterior. Mientras llega la nueva no hay sesión, así que pulsar Iniciar no tiene efecto y el reloj no puede correr sobre una sesión que ya se reemplazó.
 
 Hoy la pantalla carga una sola vez, al abrirse. Las cargas simultáneas, por ejemplo con un botón de reintentar pulsado varias veces, quedan fuera del alcance: si se añadieran, el store tendría que descartar las respuestas que lleguen tarde.

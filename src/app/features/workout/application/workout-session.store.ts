@@ -1,4 +1,4 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, PendingTasks, signal } from '@angular/core';
 import { Ticker } from '../domain/ports/ticker';
 import {
   ExerciseStatus,
@@ -21,6 +21,7 @@ export type LoadStatus = 'loading' | 'ready' | 'error';
 export class WorkoutSessionStore {
   private readonly loadWorkout = inject(LoadWorkoutUseCase);
   private readonly ticker = inject(Ticker);
+  private readonly pendingTasks = inject(PendingTasks);
 
   private readonly loadStatusState = signal<LoadStatus>('loading');
   private readonly sessionState = signal<WorkoutSession | null>(null);
@@ -40,12 +41,16 @@ export class WorkoutSessionStore {
     this.ticker.stop();
     this.sessionState.set(null);
     this.loadStatusState.set('loading');
+    // Without zone.js, Angular only waits for work it is told about: the app stays unstable until loading ends.
+    const loadingDone = this.pendingTasks.add();
     try {
       this.sessionState.set(await this.loadWorkout.execute());
       this.loadStatusState.set('ready');
     } catch {
       this.sessionState.set(null);
       this.loadStatusState.set('error');
+    } finally {
+      loadingDone();
     }
   }
 

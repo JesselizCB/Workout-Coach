@@ -1,4 +1,4 @@
-import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
+import { ApplicationRef, createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Exercise } from '../domain/exercise';
 import { Ticker } from '../domain/ports/ticker';
@@ -80,6 +80,30 @@ describe('WorkoutSessionStore', () => {
 
       expect(store.session()).toEqual(createSession([squats, pushUps]));
     });
+
+    for (const outcome of ['succeeds', 'fails'] as const) {
+      it(`keeps the application unstable while loading and releases it when loading ${outcome}`, async () => {
+        let settle!: () => void;
+        const pending = new Promise<readonly Exercise[]>((resolve, reject) => {
+          settle = () => (outcome === 'succeeds' ? resolve([squats]) : reject(new Error('Network down')));
+        });
+        const store = setUp(() => pending);
+        let stable = false;
+
+        const loading = store.load();
+        void TestBed.inject(ApplicationRef).whenStable().then(() => (stable = true));
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(stable).toBeFalse();
+
+        settle();
+        await loading;
+        await TestBed.inject(ApplicationRef).whenStable();
+
+        expect(stable).toBeTrue();
+      });
+    }
 
     it('CA16: ends in error without a session when loading fails', async () => {
       const store = setUp(() => Promise.reject(new Error('Network down')));
