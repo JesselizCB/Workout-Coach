@@ -256,6 +256,8 @@ Uso clases abstractas en lugar de interfaces por un motivo práctico: una interf
 
 `Ticker` envuelve el reloj real. En los tests lo cambio por uno falso y avanzo el tiempo a mano, sin esperar segundos reales y sin depender de `fakeAsync` (decisión D1).
 
+`Ticker` se registra una sola vez para toda la aplicación y admite un único consumidor. Hoy es suficiente, porque hay una sola pantalla de entrenamiento. Si en el futuro convivieran varias sesiones a la vez, cada una necesitaría su propio `Ticker`, ya que una podría detener el reloj de la otra.
+
 ### 4.4 Infraestructura
 
 El DTO respeta el formato que llega de fuera, en `snake_case`, y se traduce al modelo de dominio en esta capa. Ninguna otra llega a verlo:
