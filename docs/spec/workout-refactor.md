@@ -462,6 +462,38 @@ Salen de los defectos de la sección 1.4 y de las decisiones de diseño.
 | CA19 | Los componentes presentacionales no inyectan dependencias y todos los componentes usan `OnPush` | Revisión del código y test del componente presentacional |
 | CA20 | `npm run build` y `npm test` pasan sin `zone.js` | Ejecución de ambos comandos, registrada en la sección 10 |
 
+## 9. Estrategia de testing
+
+La arquitectura está pensada para que lo importante se pueda probar sin Angular. Por eso la mayoría de los tests caen sobre el dominio: son funciones puras, corren en milisegundos y no necesitan montar nada. A medida que se sube de capa hay menos tests, porque cada capa solo tiene que probar lo que agrega.
+
+Uso lo que el proyecto ya trae: Jasmine, Karma y `karma-coverage`. Cambiar de herramienta no aporta nada a lo que pide el reto.
+
+### 9.1 Qué se prueba en cada capa
+
+| Capa | Qué se prueba | Cómo |
+|---|---|---|
+| `domain` | Invariantes, operaciones, cada fila de la tabla de transiciones, el estado derivado de los ejercicios y el ejemplo completo de la sección 3 | Llamadas directas a las funciones, sin TestBed |
+| `infrastructure` | Que el mapper traduce cada campo del DTO y que el mock devuelve una lista válida | Llamadas directas |
+| `application` | Carga correcta y con error, controles, parada del `Ticker` al terminar o al destruirse, doble clic en Iniciar | TestBed con un repositorio y un `Ticker` falsos |
+| `presentation` | Que cada componente presentacional muestra lo que recibe y emite sus eventos, y el formato `mm:ss` | TestBed para los componentes, llamadas directas para el formato |
+
+### 9.2 Dobles de prueba
+
+Los puertos de la sección 4.3 son los que permiten reemplazar las piezas difíciles de probar:
+
+- **`Ticker` falso:** guarda el callback y expone un método para disparar un tick a mano. Con él, un test recorre un entrenamiento completo sin esperar ni un segundo real y sin `fakeAsync`.
+- **Repositorio falso:** devuelve una lista fija o una promesa rechazada, según el caso que se quiera probar.
+
+### 9.3 Componentes y zoneless
+
+En los tests de componentes paso los datos con `fixture.componentRef.setInput()` y espero el render con `await fixture.whenStable()`. Funcionan igual con `zone.js` y sin él, de modo que el bloque W6 no obliga a reescribirlos. En W6 se agrega `provideZonelessChangeDetection()` a la configuración de TestBed, para que los tests se ejecuten en el mismo modo que la app.
+
+### 9.4 Trazabilidad y cobertura
+
+Cada test nombra el criterio de la sección 8 que cubre, por ejemplo `it('CA4: suma una repetición al terminar el descanso', ...)`. Así es fácil comprobar que no quedó ningún criterio sin test.
+
+La cobertura se mide con `ng test --code-coverage` y se registra en la sección 10. No fijo un porcentaje como meta, porque se puede tener mucha cobertura y aun así dejar sin probar lo que importa. La meta real es que cada criterio automatizable tenga su test.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
