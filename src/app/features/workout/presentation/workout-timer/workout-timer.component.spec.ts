@@ -174,6 +174,18 @@ describe('WorkoutTimerComponent', () => {
       });
     }
 
+    it('gives the main action more visual weight than reset', async () => {
+      await render({ status: 'idle' });
+      expect(button('Iniciar')?.classList).toContain('button--primary');
+      expect(button('Reiniciar')?.classList).toContain('button--secondary');
+
+      fixture.componentRef.setInput('status', 'running');
+      await fixture.whenStable();
+
+      expect(button('Pausar')?.classList).toContain('button--primary');
+      expect(button('Reiniciar')?.classList).toContain('button--secondary');
+    });
+
     it('emits start, pause and reset when their buttons are clicked', async () => {
       const events: string[] = [];
       await render({ status: 'idle' });

@@ -108,7 +108,7 @@ Cada cosa que dejo fuera tiene su motivo:
 | Persistencia del progreso | No forma parte de los criterios de aceptación |
 | Enrutamiento | La feature tiene una sola pantalla |
 | Internacionalización | No forma parte de los criterios de aceptación y la interfaz tiene un solo idioma (decisión D2) |
-| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados, el descanso y la barra de progreso |
+| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados, el descanso, la barra de progreso y la jerarquía de los botones (decisión D9) |
 
 ## 3. Modelo de dominio
 
@@ -589,15 +589,18 @@ Cada tramo de código se pasó por una revisión automática independiente, cent
 | W5. Retirada del legacy | `6ec0966` |
 | W6. Zoneless | `0bc354b` a `aac8343` |
 
-### 10.8 Actualización: barra de progreso (CA21)
+### 10.8 Actualización: barra de progreso y botones (CA21, D8 y D9)
 
-Medido en la rama `feat/repetition-progress`, después de añadir la barra de la decisión D8.
+Medido en la rama `feat/repetition-progress`, después de añadir la barra de la decisión D8 y la jerarquía de botones de la decisión D9.
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 117 tests en verde |
+| `npm test` | 118 tests en verde |
 | Cobertura | 99,44 % de sentencias (180 de 181), 93,87 % de ramas (46 de 49), 100 % de funciones (55 de 55), 99,4 % de líneas (167 de 168) |
-| Total transferido | 39,12 kB, 0,63 kB más que sin la barra |
+| Total transferido | 39,30 kB, 0,81 kB más que antes de la barra y los botones |
+| Contraste de los botones | Texto blanco sobre azul: 4,63:1, por encima del 4,5:1 de WCAG AA |
+| Navegador, pantalla inicial | Iniciar en azul como acción principal y Reiniciar con borde como secundaria |
+| Navegador, al terminar | Todos los tramos en verde, contador "2 / 2" e Iniciar deshabilitado en gris |
 | Navegador, segunda repetición de Squats | Contador "1 / 3", primer tramo completo en verde, segundo al 38 % y tercero vacío |
 | Navegador, al pasar a Push-ups | Contador "0 / 2" y dos tramos vacíos |
 
@@ -775,3 +778,11 @@ Se calcula en la presentación con datos que la sesión ya tiene, así que el do
 | Progreso del entrenamiento completo | Mezcla ejercicios con distinto número de repeticiones y es menos claro para el usuario |
 
 **Limitación.** Con muchas repeticiones, por ejemplo más de 15, los tramos quedarían muy finos. Con los ejercicios actuales, de 2 y 3 repeticiones, no ocurre. Si hiciera falta, la barra podría volver a ser continua a partir de cierto número de repeticiones.
+
+### D9. Jerarquía visual de los controles
+
+**Contexto.** Los tres botones usaban el estilo por defecto del navegador, así que Reiniciar, que borra todo el progreso, pesaba visualmente lo mismo que la acción principal.
+
+**Decisión.** Iniciar y Pausar se muestran como acción principal, en azul con texto blanco (contraste 4,63:1, por encima del 4,5:1 de WCAG AA). Reiniciar se muestra como acción secundaria, con borde y sin relleno. Todos tienen un foco visible al navegar con teclado. Los estilos viven dentro del temporizador, sin tocar el CSS global.
+
+**Justificación.** No es un rediseño: da jerarquía a las acciones y reduce el riesgo de reiniciar por error.

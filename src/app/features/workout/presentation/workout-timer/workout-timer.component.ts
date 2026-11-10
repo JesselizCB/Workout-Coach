@@ -39,13 +39,18 @@ interface ProgressSegment {
 
     <div class="timer__controls">
       @if (status() === 'running') {
-        <button type="button" (click)="pause.emit()">{{ texts.pause }}</button>
+        <button type="button" class="button button--primary" (click)="pause.emit()">{{ texts.pause }}</button>
       } @else {
-        <button type="button" [disabled]="status() === 'finished'" (click)="start.emit()">
+        <button
+          type="button"
+          class="button button--primary"
+          [disabled]="status() === 'finished'"
+          (click)="start.emit()"
+        >
           {{ texts.start }}
         </button>
       }
-      <button type="button" (click)="reset.emit()">{{ texts.reset }}</button>
+      <button type="button" class="button button--secondary" (click)="reset.emit()">{{ texts.reset }}</button>
     </div>
   `,
   styles: `
@@ -78,6 +83,27 @@ interface ProgressSegment {
       transition: width 0.4s ease;
     }
     .progress__segment--done .progress__fill { background: #1e8449; }
+    .timer__controls { display: flex; gap: 0.5rem; }
+    .button {
+      margin: 0;
+      padding: 0.55rem 1.1rem;
+      font: inherit;
+      font-weight: 600;
+      border: 2px solid #1f6feb;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .button--primary { background: #1f6feb; color: #ffffff; }
+    .button--primary:hover:not(:disabled) { background: #1a5fd0; border-color: #1a5fd0; }
+    .button--secondary { background: #ffffff; color: #1f6feb; }
+    .button--secondary:hover { background: #e8f4ff; }
+    .button:disabled {
+      background: #e5e8ec;
+      border-color: #e5e8ec;
+      color: #6b7682;
+      cursor: not-allowed;
+    }
+    .button:focus-visible { outline: 3px solid #f5b041; outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       .progress__fill { transition: none; }
     }
