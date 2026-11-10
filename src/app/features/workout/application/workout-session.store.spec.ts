@@ -4,31 +4,8 @@ import { Exercise } from '../domain/exercise';
 import { Ticker } from '../domain/ports/ticker';
 import { WorkoutRepository } from '../domain/ports/workout.repository';
 import { createSession } from '../domain/workout-session';
+import { FakeTicker } from '../testing/fake-ticker';
 import { WorkoutSessionStore } from './workout-session.store';
-
-class FakeTicker implements Ticker {
-  startCalls = 0;
-  private onTick: (() => void) | null = null;
-
-  get running(): boolean {
-    return this.onTick !== null;
-  }
-
-  start(onTick: () => void): void {
-    this.startCalls++;
-    this.onTick = onTick;
-  }
-
-  stop(): void {
-    this.onTick = null;
-  }
-
-  tick(times = 1): void {
-    for (let i = 0; i < times; i++) {
-      this.onTick?.();
-    }
-  }
-}
 
 const squats: Exercise = { name: 'Squats', repetitions: 3, repetitionSeconds: 5, restSeconds: 3 };
 const pushUps: Exercise = { name: 'Push-ups', repetitions: 2, repetitionSeconds: 4, restSeconds: 2 };
