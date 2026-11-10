@@ -417,6 +417,51 @@ Mientras duren W1 a W4 conviven dos componentes `WorkoutTimerComponent`, el lega
 
 `strict` ya está activo en `tsconfig.json`, pero no impide escribir `any` de forma explícita. Para cumplir con "sin `any`", cada bloque revisa que no aparezca en el código nuevo, y al cerrar W5 no debe quedar ninguno en el proyecto.
 
+## 8. Criterios de aceptación
+
+Un criterio solo sirve si se puede comprobar, así que cada uno indica dónde se verifica. Casi todos quedan cubiertos por tests automáticos. La prueba manual en el navegador queda para lo puramente visual.
+
+### 8.1 Criterios del reto
+
+Copio los criterios tal como aparecen en `docs/CHALLENGE.md`. El último lo separo en dos porque son dos comportamientos distintos.
+
+| ID | Criterio | Cómo se comprueba |
+|---|---|---|
+| CA1 | Al cargar, todos los ejercicios están pendientes y la sesión no inicia sola. | Test de dominio sobre `createSession` y test del store tras `load()` |
+| CA2 | Iniciar activa el primer ejercicio y su `repetition_time`. | Test de dominio sobre `start` |
+| CA3 | Al llegar a cero se inicia descanso con `rest_time`. | Test de dominio sobre `tick` |
+| CA4 | Al terminar descanso se incrementa la repetición completada. | Test de dominio sobre `tick` |
+| CA5 | Al completar repeticiones, el ejercicio se completa y arranca el siguiente. | Test de dominio sobre `tick` y sobre el estado derivado de cada ejercicio |
+| CA6 | Al completar el último ejercicio, el entrenamiento finaliza. | Test de dominio con el ejemplo completo de la sección 3 |
+| CA7 | Pausar conserva progreso. | Tests de dominio y del store: tras pausar, un `tick` no cambia nada y al reanudar se sigue desde el mismo punto |
+| CA8 | Reiniciar vuelve al estado inicial. | Tests de dominio y del store desde cada estado de la sesión |
+
+Sobre CA3 conviene aclarar cómo lo interpreto. "Llegar a cero" es el momento en que se agota el último segundo, y en ese mismo instante empieza el descanso. Por eso la pantalla pasa de `00:01` directamente al tiempo de descanso, sin quedarse un segundo en `00:00`. La versión legacy se comporta igual.
+
+### 8.2 Comportamientos añadidos
+
+Salen de los defectos de la sección 1.4 y de las decisiones de diseño.
+
+| ID | Criterio | Cómo se comprueba |
+|---|---|---|
+| CA9 | Con el entrenamiento terminado, Iniciar está deshabilitado y un `start` no cambia la sesión | Test de dominio y test del componente del temporizador |
+| CA10 | El tiempo se muestra como `mm:ss`, por ejemplo 90 segundos como `01:30` | Test de la función de formato |
+| CA11 | La fase de descanso se distingue visualmente de la de ejercicio | Prueba manual |
+| CA12 | La notificación cambia al empezar un descanso, al volver al ejercicio, al completar un ejercicio y al terminar el entrenamiento | Test de dominio sobre `lastEvent` y prueba manual |
+| CA13 | Pulsar Iniciar dos veces seguidas no acelera el temporizador | Test del store con un `Ticker` falso |
+| CA14 | Al salir de la pantalla, el temporizador se detiene | Test del store al destruirse |
+| CA15 | Si la lista está vacía o trae datos inválidos, se muestra un mensaje de error en lugar de la sesión | Tests de dominio y del caso de uso |
+| CA16 | Si la carga falla, se muestra un mensaje de error | Test del caso de uso y del store |
+
+### 8.3 Criterios técnicos
+
+| ID | Criterio | Cómo se comprueba |
+|---|---|---|
+| CA17 | `domain` no importa Angular, y `presentation` no importa `infrastructure` | Búsqueda de imports en cada capa |
+| CA18 | No queda ningún `any` en el proyecto | Búsqueda en `src/` |
+| CA19 | Los componentes presentacionales no inyectan dependencias y todos los componentes usan `OnPush` | Revisión del código y test del componente presentacional |
+| CA20 | `npm run build` y `npm test` pasan sin `zone.js` | Ejecución de ambos comandos, registrada en la sección 10 |
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
