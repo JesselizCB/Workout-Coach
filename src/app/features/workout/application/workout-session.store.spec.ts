@@ -79,6 +79,16 @@ describe('WorkoutSessionStore', () => {
       expect(store.session()).toBeNull();
     });
 
+    it('stops the clock when the workout is loaded again', async () => {
+      const store = await loadedStore();
+      store.start();
+
+      await store.load();
+
+      expect(ticker.running).toBeFalse();
+      expect(store.session()).toEqual(createSession([squats, pushUps]));
+    });
+
     it('CA16: ends in error without a session when loading fails', async () => {
       const store = setUp(() => Promise.reject(new Error('Network down')));
 

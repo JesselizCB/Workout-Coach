@@ -37,6 +37,7 @@ export class WorkoutSessionStore {
   }
 
   async load(): Promise<void> {
+    this.ticker.stop();
     this.loadStatusState.set('loading');
     try {
       this.sessionState.set(await this.loadWorkout.execute());
