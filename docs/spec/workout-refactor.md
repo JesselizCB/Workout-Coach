@@ -395,6 +395,28 @@ Se calculan a partir del estado de la sesión, igual que en la versión legacy: 
 
 Al terminar, Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
 
+## 7. Plan de implementación
+
+La regla que guía el orden es que la app tiene que funcionar en cada commit. Por eso construyo de adentro hacia afuera: primero el dominio, que no toca nada de lo que existe, y al final la pantalla nueva, que es el único paso que cambia lo que ve el usuario. El componente legacy sigue funcionando hasta que su reemplazo está listo y probado.
+
+Cada bloque se escribe con los tests primero: veo fallar el test, escribo lo mínimo para que pase y después ordeno el código. Ningún bloque se cierra sin que `npm run build` y `npm test` pasen.
+
+| Bloque | Qué incluye | Cómo sé que está listo | ¿Cambia la app? |
+|---|---|---|---|
+| **W1. Dominio** | `Exercise`, `WorkoutSession` con sus operaciones, errores de dominio y los puertos | Tests de invariantes, operaciones y transiciones, incluido el ejemplo completo de la sección 3 | No |
+| **W2. Infraestructura** | DTO, mapper, mock con una lista de ejercicios e `IntervalTicker` | Tests del mapper y del mock | No |
+| **W3. Aplicación** | `LoadWorkoutUseCase` y `WorkoutSessionStore` | Tests con un repositorio y un `Ticker` falsos, incluidos los errores de carga | No |
+| **W4. Presentación** | Textos, formato `mm:ss`, los cinco componentes y `workout.providers.ts`. `AppComponent` pasa a usar `WorkoutPageComponent` | Tests de al menos un componente presentacional y del formato de tiempo. Prueba manual en el navegador | **Sí** |
+| **W5. Retirada del legacy** | Borrar `components/` y `services/`, y actualizar el test de `AppComponent` | Ningún archivo importa código legacy y los tests pasan | No |
+| **W6. Zoneless** | `provideZonelessChangeDetection()` y eliminación de `zone.js` (decisión D1) | Build y tests sin `zone.js`, prueba manual y comparación del tamaño del build | No |
+| **W7. Cierre** | Evidencia de build y tests en la sección 10 y README actualizado | La spec refleja lo que realmente se construyó | No |
+
+W4 es el bloque más grande y el único con riesgo visible, así que puede repartirse en varios commits: primero los componentes presentacionales con sus tests, y después el container y la conexión con `AppComponent`.
+
+Mientras duren W1 a W4 conviven dos componentes `WorkoutTimerComponent`, el legacy y el nuevo. Están en carpetas distintas y la app solo importa uno a la vez, así que no chocan. W5 elimina el legacy.
+
+`strict` ya está activo en `tsconfig.json`, pero no impide escribir `any` de forma explícita. Para cumplir con "sin `any`", cada bloque revisa que no aparezca en el código nuevo, y al cerrar W5 no debe quedar ninguno en el proyecto.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
