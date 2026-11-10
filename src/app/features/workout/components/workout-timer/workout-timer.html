@@ -1,0 +1,9 @@
+<div class="card">
+<h1>Workout Coach</h1>
+<h2>{{ exercise.exercise_name }}</h2>
+<div class="phase" [ngClass]="{'rest': resting}">{{ resting ? 'Rest' : 'Exercise' }}</div>
+<div class="timer">00:{{ seconds < 10 ? '0' + seconds : seconds }}</div>
+<p>Completed repetitions: {{ completed }} / {{ exercise.repetitions_number }}</p>
+<button (click)="start()" *ngIf="!running">Start</button><button (click)="pause()" *ngIf="running">Pause</button><button (click)="reset()">Reset</button>
+<div class="toast" *ngIf="toast">{{ toast }}</div>
+</div>
