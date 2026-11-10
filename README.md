@@ -1,5 +1,9 @@
 # Workout Coach
 
+[![CI](https://github.com/JesselizCB/Workout-Coach/actions/workflows/ci.yml/badge.svg)](https://github.com/JesselizCB/Workout-Coach/actions/workflows/ci.yml)
+
+**Demo:** https://jesselizcb.github.io/Workout-Coach/
+
 Aplicación en Angular 20 que guía un entrenamiento completo. Muestra la lista de ejercicios con su estado (Pendiente, En curso o Completado), cuenta el tiempo de cada repetición y de cada descanso, y avanza sola de un ejercicio al siguiente hasta terminar.
 
 El proyecto parte de una base legacy funcional, que se evolucionó sin romper su comportamiento: Clean Architecture, componentes container y presentacionales, Signals, modo zoneless y tests de cada capa.
@@ -28,6 +32,10 @@ npm run build
 npm test
 npx ng test --watch=false --code-coverage   # tests con informe de cobertura en coverage/
 ```
+
+## Integración continua
+
+En cada push a `main` y en cada Pull Request, GitHub Actions instala las dependencias con `npm ci`, compila y ejecuta los tests en Chrome sin interfaz (`.github/workflows/ci.yml`). Cuando `main` pasa esas comprobaciones, la app se publica en GitHub Pages.
 
 ## Arquitectura
 
