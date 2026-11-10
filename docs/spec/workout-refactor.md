@@ -347,6 +347,54 @@ El dominio solo deja constancia de lo que ocurrió en `lastEvent`. El container 
 
 El store se provee en el container, de modo que se destruye junto con él. En ese momento detiene el `Ticker` usando `DestroyRef`, y el intervalo no sigue vivo como pasaba antes.
 
+## 6. Diseño de componentes
+
+La pantalla se reparte entre un container y cuatro componentes presentacionales. El container es el único que sabe que existe un store. Los demás solo reciben datos y avisan de lo que pasa, así que se pueden entender, reutilizar y probar sin montar nada alrededor.
+
+Todos los componentes son standalone, usan `ChangeDetectionStrategy.OnPush` y declaran sus entradas con `input.required()` cuando no tiene sentido renderizarlos sin ellas.
+
+```text
+WorkoutPageComponent (container)
+├─ WorkoutTimerComponent
+├─ WorkoutToastComponent
+└─ ExerciseListComponent
+   └─ ExerciseItemComponent (uno por ejercicio)
+```
+
+### 6.1 `WorkoutPageComponent`, el container
+
+Provee `WorkoutSessionStore`, lo inyecta con `inject()` y llama a `load()` al crearse. Su trabajo es traducir el estado del store a lo que necesita cada componente hijo, y para eso usa `computed()`: busca los textos en `workout.labels.ts`, arma la lista de ejercicios con su estado y decide qué controles están disponibles.
+
+También se encarga de los estados de carga. Mientras `loadStatus` vale `loading` muestra un aviso de carga, y si vale `error` muestra un mensaje en lugar de la sesión.
+
+### 6.2 Componentes presentacionales
+
+Ninguno inyecta dependencias.
+
+| Componente | Recibe (`input`) | Emite (`output`) | Qué hace |
+|---|---|---|---|
+| `WorkoutTimerComponent` | Nombre del ejercicio, fase, segundos restantes, repeticiones hechas y totales, controles disponibles | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y los botones |
+| `ExerciseListComponent` | Lista de ejercicios con su estado | — | Recorre la lista con `@for` |
+| `ExerciseItemComponent` | Nombre, repeticiones, estado y su etiqueta | — | Muestra un ejercicio y marca su estado con una clase CSS |
+| `WorkoutToastComponent` | Mensaje o `null` | — | Muestra la notificación, si la hay |
+
+El formato `mm:ss` vive en una función pura de `presentation`, que el temporizador usa dentro de un `computed()`. Así se prueba por separado y el template no hace cuentas.
+
+La notificación usa `role="status"`, para que un lector de pantalla anuncie cada mensaje sin interrumpir al usuario.
+
+### 6.3 Controles disponibles
+
+Se calculan a partir del estado de la sesión, igual que en la versión legacy: Iniciar se ve cuando la sesión no está corriendo y Pausar cuando sí lo está. Reiniciar está siempre visible.
+
+| Sesión | Iniciar | Pausar | Reiniciar |
+|---|---|---|---|
+| `idle` | Visible | — | Visible |
+| `running` | — | Visible | Visible |
+| `paused` | Visible | — | Visible |
+| `finished` | Visible y deshabilitado | — | Visible |
+
+Al terminar, Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
