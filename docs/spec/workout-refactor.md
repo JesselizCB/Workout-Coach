@@ -494,6 +494,60 @@ Cada test nombra el criterio de la sección 8 que cubre, por ejemplo `it('CA4: s
 
 La cobertura se mide con `ng test --code-coverage` y se registra en la sección 10. No fijo un porcentaje como meta, porque se puede tener mucha cobertura y aun así dejar sin probar lo que importa. La meta real es que cada criterio automatizable tenga su test.
 
+## 11. Extensión: microfrontends y NgRx
+
+Esta sección es solo de diseño. Describe cómo evolucionaría la feature si tuviera que vivir dentro de una plataforma más grande, repartida entre varios equipos. Nada de esto se implementa en el reto.
+
+### 11.1 Shell y remotes
+
+Imagino una plataforma de entrenamiento con varias áreas, cada una a cargo de un equipo y con su propio despliegue:
+
+- **Shell (host):** el marco común. Se encarga del layout, la navegación, la autenticación y de cargar cada remote cuando el usuario entra en su ruta.
+- **Remote `workout`:** esta feature. Expone sus rutas, con `WorkoutPageComponent` como punto de entrada, y el shell la carga de forma diferida con `loadChildren`.
+- **Otros remotes posibles:** por ejemplo, historial de entrenamientos o perfil. Los menciono para mostrar dónde están los límites, no porque formen parte del diseño.
+
+La arquitectura por capas ayuda mucho aquí: el remote `workout` ya es una unidad cerrada, con su dominio, sus puertos y su raíz de composición. Convertirlo en remote es sobre todo cambiar cómo se publica.
+
+### 11.2 Native Federation o Module Federation
+
+Elegiría **Native Federation**. Module Federation depende de webpack, mientras que este proyecto compila con `@angular/build:application`, el builder basado en esbuild que Angular usa por defecto. Native Federation trabaja sobre módulos ES estándar e import maps, así que encaja con ese builder sin cambiarlo.
+
+El shell lee un manifiesto con la URL de cada remote. Cambiar esa URL por entorno permite desplegar cada remote por separado sin volver a compilar el shell.
+
+### 11.3 Dependencias compartidas
+
+- **Compartidas como singleton:** `@angular/core`, `@angular/common`, `@angular/router` y `rxjs`. Tiene que haber una sola instancia de Angular en la página, porque dos instancias significan dos inyectores y servicios duplicados.
+- **Misma versión mayor de Angular en todos los remotes,** con la compatibilidad de versiones declarada de forma estricta, para que un desajuste falle al arrancar en lugar de producir errores difíciles de rastrear.
+- **No compartido:** el dominio de `workout`. Es lógica de un solo equipo, y compartirlo crearía un acoplamiento justo donde los microfrontends buscan independencia.
+
+### 11.4 Estado local y compartido
+
+La regla que seguiría es que cada remote es dueño de su estado y solo se comparte lo que de verdad pertenece a toda la plataforma.
+
+| Estado | Dónde vive | Motivo |
+|---|---|---|
+| Sesión de entrenamiento: tiempo, fase, ejercicio actual | Local en el remote, en `WorkoutSessionStore` | Solo le importa a esta pantalla y cambia cada segundo |
+| Usuario autenticado y preferencias | Shell, expuesto a los remotes | Lo necesitan todos |
+| Aviso de "entrenamiento terminado" | Evento publicado por el remote | Otro remote, como el historial, puede reaccionar sin que `workout` sepa que existe |
+
+Para ese último caso prefiero un evento con un contrato tipado en una librería compartida antes que un store global. Así los remotes se comunican sin depender del estado interno de los demás.
+
+### 11.5 Cuándo usaría NgRx
+
+En esta feature no lo usaría. El estado es local, lo modifica una sola pantalla y Signals lo resuelve con menos código. NgRx tendría sentido si el estado se compartiera entre varias features o remotes, si hubiera flujos asíncronos complejos que coordinar, o si el equipo necesitara las Redux DevTools para seguir cada cambio.
+
+Si llegara ese momento, la migración sería directa, porque el dominio ya está escrito como funciones puras que reciben un estado y devuelven otro, que es justamente lo que hace un reducer:
+
+| Pieza de NgRx | Qué contendría | Equivalente actual |
+|---|---|---|
+| **Actions** | `[Workout Page] Start`, `Pause`, `Reset`, `[Workout Timer] Tick`, `[Workout API] Exercises Loaded` y `Load Failed` | Los métodos del store y el callback del `Ticker` |
+| **Reducer** | Delega en `start`, `pause`, `reset` y `tick` del dominio | Las mismas funciones, sin cambios |
+| **Selectors** | Estado de cada ejercicio, tiempo restante, controles disponibles | Los `computed()` |
+| **Effects** | La carga a través de `WorkoutRepository` y el intervalo que despacha `Tick` | `LoadWorkoutUseCase` y el `Ticker` |
+| **Store** | El estado de la feature, registrado con `provideState` | `WorkoutSessionStore` |
+
+Hay un paso intermedio que también consideraría: **NgRx SignalStore**, que mantiene la API basada en Signals y se parece mucho al store actual. Sería la opción natural si se quisieran las convenciones de NgRx sin adoptar todo el patrón Redux.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
