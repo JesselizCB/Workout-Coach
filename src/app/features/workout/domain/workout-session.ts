@@ -57,6 +57,64 @@ export function reset(session: WorkoutSession): WorkoutSession {
   return createSession(session.exercises);
 }
 
+export function tick(session: WorkoutSession): WorkoutSession {
+  if (session.status !== 'running') {
+    return session;
+  }
+  if (session.remainingSeconds > 1) {
+    return { ...session, remainingSeconds: session.remainingSeconds - 1 };
+  }
+  return session.phase === 'repetition' ? startRest(session) : finishRest(session);
+}
+
+function startRest(session: WorkoutSession): WorkoutSession {
+  return {
+    ...session,
+    phase: 'rest',
+    remainingSeconds: currentExercise(session).restSeconds,
+    lastEvent: 'rest-started',
+  };
+}
+
+function finishRest(session: WorkoutSession): WorkoutSession {
+  const exercise = currentExercise(session);
+  const completedRepetitions = session.completedRepetitions + 1;
+
+  if (completedRepetitions < exercise.repetitions) {
+    return {
+      ...session,
+      phase: 'repetition',
+      remainingSeconds: exercise.repetitionSeconds,
+      completedRepetitions,
+      lastEvent: 'repetition-started',
+    };
+  }
+
+  const nextIndex = session.currentIndex + 1;
+  if (nextIndex < session.exercises.length) {
+    return {
+      ...session,
+      currentIndex: nextIndex,
+      phase: 'repetition',
+      remainingSeconds: session.exercises[nextIndex].repetitionSeconds,
+      completedRepetitions: 0,
+      lastEvent: 'exercise-completed',
+    };
+  }
+
+  return {
+    ...session,
+    status: 'finished',
+    remainingSeconds: 0,
+    completedRepetitions,
+    lastEvent: 'workout-completed',
+  };
+}
+
+function currentExercise(session: WorkoutSession): Exercise {
+  return session.exercises[session.currentIndex];
+}
+
 function assertValidExercise(exercise: Exercise): void {
   for (const field of POSITIVE_INTEGER_FIELDS) {
     const value = exercise[field];

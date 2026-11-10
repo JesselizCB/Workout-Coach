@@ -1,6 +1,6 @@
 import { Exercise } from './exercise';
 import { InvalidWorkoutError } from './workout.errors';
-import { createSession, pause, reset, start, WorkoutSession } from './workout-session';
+import { createSession, pause, reset, start, tick, WorkoutSession } from './workout-session';
 
 const squats: Exercise = { name: 'Squats', repetitions: 3, repetitionSeconds: 5, restSeconds: 3 };
 const pushUps: Exercise = { name: 'Push-ups', repetitions: 2, repetitionSeconds: 4, restSeconds: 2 };
@@ -117,4 +117,124 @@ describe('reset', () => {
       expect(reset(session)).toEqual(createSession([squats, pushUps]));
     });
   }
+});
+
+describe('tick', () => {
+  it('counts down one second during a repetition', () => {
+    const session = sessionWith({ status: 'running', remainingSeconds: 4, lastEvent: 'repetition-started' });
+
+    expect(tick(session)).toEqual({ ...session, remainingSeconds: 3 });
+  });
+
+  it('counts down one second during a rest', () => {
+    const session = sessionWith({ status: 'running', phase: 'rest', remainingSeconds: 2, lastEvent: 'rest-started' });
+
+    expect(tick(session)).toEqual({ ...session, remainingSeconds: 1 });
+  });
+
+  it('CA3: starts the rest with its rest time when the repetition reaches zero', () => {
+    const session = sessionWith({ status: 'running', remainingSeconds: 1 });
+
+    expect(tick(session)).toEqual({
+      ...session,
+      phase: 'rest',
+      remainingSeconds: squats.restSeconds,
+      lastEvent: 'rest-started',
+    });
+  });
+
+  it('CA4: adds a completed repetition when the rest ends', () => {
+    const session = sessionWith({ status: 'running', phase: 'rest', remainingSeconds: 1 });
+
+    expect(tick(session)).toEqual({
+      ...session,
+      phase: 'repetition',
+      remainingSeconds: squats.repetitionSeconds,
+      completedRepetitions: 1,
+      lastEvent: 'repetition-started',
+    });
+  });
+
+  it('CA5: completes the exercise and starts the next one after its last repetition', () => {
+    const session = sessionWith({
+      status: 'running',
+      phase: 'rest',
+      remainingSeconds: 1,
+      completedRepetitions: squats.repetitions - 1,
+    });
+
+    expect(tick(session)).toEqual({
+      ...session,
+      currentIndex: 1,
+      phase: 'repetition',
+      remainingSeconds: pushUps.repetitionSeconds,
+      completedRepetitions: 0,
+      lastEvent: 'exercise-completed',
+    });
+  });
+
+  it('CA6: finishes the workout after the last repetition of the last exercise', () => {
+    const session = sessionWith({
+      status: 'running',
+      currentIndex: 1,
+      phase: 'rest',
+      remainingSeconds: 1,
+      completedRepetitions: pushUps.repetitions - 1,
+    });
+
+    expect(tick(session)).toEqual({
+      ...session,
+      status: 'finished',
+      remainingSeconds: 0,
+      completedRepetitions: pushUps.repetitions,
+      lastEvent: 'workout-completed',
+    });
+  });
+
+  for (const status of ['idle', 'paused', 'finished'] as const) {
+    it(`has no effect on a ${status} session`, () => {
+      const session = sessionWith({ status });
+
+      expect(tick(session)).toBe(session);
+    });
+  }
+});
+
+describe('a complete workout', () => {
+  it('CA6 and CA12: runs every exercise in order until the workout finishes', () => {
+    const shortSquats: Exercise = { name: 'Squats', repetitions: 2, repetitionSeconds: 3, restSeconds: 2 };
+    const shortPushUps: Exercise = { name: 'Push-ups', repetitions: 1, repetitionSeconds: 2, restSeconds: 1 };
+    // [remainingSeconds, phase, completedRepetitions, currentIndex, status, lastEvent] after each tick.
+    const expected = [
+      [2, 'repetition', 0, 0, 'running', null],
+      [1, 'repetition', 0, 0, 'running', null],
+      [2, 'rest', 0, 0, 'running', 'rest-started'],
+      [1, 'rest', 0, 0, 'running', 'rest-started'],
+      [3, 'repetition', 1, 0, 'running', 'repetition-started'],
+      [2, 'repetition', 1, 0, 'running', 'repetition-started'],
+      [1, 'repetition', 1, 0, 'running', 'repetition-started'],
+      [2, 'rest', 1, 0, 'running', 'rest-started'],
+      [1, 'rest', 1, 0, 'running', 'rest-started'],
+      [2, 'repetition', 0, 1, 'running', 'exercise-completed'],
+      [1, 'repetition', 0, 1, 'running', 'exercise-completed'],
+      [1, 'rest', 0, 1, 'running', 'rest-started'],
+      [0, 'rest', 1, 1, 'finished', 'workout-completed'],
+    ] as const;
+
+    let session = start(createSession([shortSquats, shortPushUps]));
+    const actual = expected.map(() => {
+      session = tick(session);
+      return [
+        session.remainingSeconds,
+        session.phase,
+        session.completedRepetitions,
+        session.currentIndex,
+        session.status,
+        session.lastEvent,
+      ];
+    });
+
+    expect(actual).toEqual(expected.map((row) => [...row]));
+    expect(tick(session)).toBe(session);
+  });
 });
