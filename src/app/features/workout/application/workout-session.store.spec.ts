@@ -89,6 +89,21 @@ describe('WorkoutSessionStore', () => {
       expect(store.session()).toEqual(createSession([squats, pushUps]));
     });
 
+    it('has no session while reloading, so starting has no effect', async () => {
+      const store = await loadedStore();
+
+      const reload = store.load();
+      store.start();
+
+      expect(store.loadStatus()).toBe('loading');
+      expect(store.session()).toBeNull();
+      expect(ticker.startCalls).toBe(0);
+
+      await reload;
+
+      expect(store.session()).toEqual(createSession([squats, pushUps]));
+    });
+
     it('CA16: ends in error without a session when loading fails', async () => {
       const store = setUp(() => Promise.reject(new Error('Network down')));
 

@@ -321,7 +321,7 @@ Usuario ────────> Presentacional ───────> Containe
 
 Si la carga falla o los datos no son válidos, el store pasa a `error` y la pantalla muestra un mensaje en lugar de la sesión.
 
-Si se vuelve a cargar con una sesión en marcha, el store detiene antes el `Ticker`, para que el reloj no siga corriendo sobre una sesión que ya se reemplazó.
+Si se vuelve a cargar con una sesión en marcha, el store detiene antes el `Ticker` y descarta la sesión anterior. Mientras llega la nueva no hay sesión, así que pulsar Iniciar no tiene efecto y el reloj no puede correr sobre una sesión que ya se reemplazó.
 
 ### 5.2 Cuando pasa un segundo
 
