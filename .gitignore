@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output and caches
+dist/
+.angular/
+coverage/
+
+# Logs
+*.log
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
