@@ -366,7 +366,7 @@ WorkoutPageComponent (container)
 
 ### 6.1 `WorkoutPageComponent`, el container
 
-Provee `WorkoutSessionStore`, lo inyecta con `inject()` y llama a `load()` al crearse. Su trabajo es traducir el estado del store a lo que necesita cada componente hijo, y para eso usa `computed()`: busca los textos en `workout.labels.ts`, arma la lista de ejercicios con su estado y decide qué controles están disponibles.
+Provee `WorkoutSessionStore`, lo inyecta con `inject()` y llama a `load()` al crearse. Su trabajo es traducir el estado del store a lo que necesita cada componente hijo, y para eso usa `computed()`: busca los textos en `workout.labels.ts`, arma la lista de ejercicios con su estado y entrega al temporizador el estado de la sesión.
 
 También se encarga de los estados de carga. Mientras `loadStatus` vale `loading` muestra un aviso de carga, y si vale `error` muestra un mensaje en lugar de la sesión.
 
@@ -376,7 +376,7 @@ Ninguno inyecta dependencias.
 
 | Componente | Recibe (`input`) | Emite (`output`) | Qué hace |
 |---|---|---|---|
-| `WorkoutTimerComponent` | Nombre del ejercicio, fase, segundos restantes, repeticiones hechas y totales, controles disponibles | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y los botones |
+| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y decide qué botones mostrar según la tabla 6.3 |
 | `ExerciseListComponent` | Lista de ejercicios con su estado | — | Recorre la lista con `@for` |
 | `ExerciseItemComponent` | Nombre, repeticiones, estado y su etiqueta | — | Muestra un ejercicio y marca su estado con una clase CSS |
 | `WorkoutToastComponent` | Mensaje o `null` | — | Muestra la notificación, si la hay |
