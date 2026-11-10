@@ -176,7 +176,7 @@ Si una operación llega en un estado que no le corresponde, la sesión se devuel
 | `rest` | 1 | Última repetición, quedan ejercicios | Avanza `currentIndex`, reinicia `completedRepetitions` y pasa a `repetition` con el tiempo del siguiente ejercicio | `exercise-completed` |
 | `rest` | 1 | Última repetición del último ejercicio | Suma la repetición, `status` pasa a `finished` y `remainingSeconds` a 0 | `workout-completed` |
 
-Un detalle que conviene tener presente: cada repetición termina con su descanso, también la última de cada ejercicio. Lo exige el criterio de aceptación, que suma la repetición completada justo al terminar el descanso.
+Cada repetición termina con su descanso, también la última de cada ejercicio, porque el criterio de aceptación suma la repetición completada al terminar el descanso.
 
 ### 3.5 Estado de cada ejercicio
 
@@ -229,7 +229,7 @@ Cuando termine la migración, las carpetas legacy `components/` y `services/` de
 
 ### 4.2 Reglas de dependencia
 
-La regla de oro es que las dependencias siempre apuntan hacia el dominio:
+Las dependencias siempre apuntan hacia el dominio:
 
 | Capa | Puede importar | No puede importar |
 |---|---|---|
@@ -563,9 +563,9 @@ Además de los tests, cargué la app en Chrome sin interfaz gráfica en tres mom
 | App nueva, pantalla inicial | Squats, `00:05`, `0 / 3`, tres ejercicios en Pendiente |
 | App nueva en modo zoneless, unos 6,5 s después de pulsar Iniciar | Descanso, `00:02`, "Tiempo de descanso", En curso / Pendiente / Pendiente |
 
-### 10.6 Revisión independiente
+### 10.6 Revisión de código
 
-Cada tramo de código se pasó por una revisión automática independiente, centrada en fiabilidad, antes de continuar. Las siete revisiones terminaron aprobadas. Sus observaciones se resolvieron así:
+Cada tramo de código pasó por una revisión de fiabilidad antes de continuar, y todas terminaron aprobadas. Sus observaciones se resolvieron así:
 
 | Observación | Qué se hizo |
 |---|---|
