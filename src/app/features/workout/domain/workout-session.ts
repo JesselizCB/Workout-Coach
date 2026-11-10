@@ -39,6 +39,20 @@ export function createSession(exercises: readonly Exercise[]): WorkoutSession {
   };
 }
 
+export function start(session: WorkoutSession): WorkoutSession {
+  if (session.status !== 'idle' && session.status !== 'paused') {
+    return session;
+  }
+  return { ...session, status: 'running' };
+}
+
+export function pause(session: WorkoutSession): WorkoutSession {
+  if (session.status !== 'running') {
+    return session;
+  }
+  return { ...session, status: 'paused' };
+}
+
 function assertValidExercise(exercise: Exercise): void {
   for (const field of POSITIVE_INTEGER_FIELDS) {
     const value = exercise[field];
