@@ -50,6 +50,57 @@ Tras estas reparaciones, `npm run build`, `npm start` y `npm test` funcionan.
 
 La aplicación solo admite un ejercicio. No existe una lista, ni estados por ejercicio, ni avance automático entre ejercicios, que son el núcleo de la nueva funcionalidad.
 
+## 2. Alcance y fuera de alcance
+
+### 2.1 Dentro del alcance
+
+**Arquitectura**
+
+- Reorganizar la feature en las capas `domain`, `application`, `infrastructure` y `presentation`.
+- Invertir la dependencia de datos mediante el puerto `WorkoutRepository`.
+- Mapear el DTO externo en `snake_case` al modelo de dominio dentro de `infrastructure`.
+- Separar un componente container de componentes presentacionales sin dependencias inyectadas.
+
+**Funcionalidad**
+
+- Entrenamiento completo: el mock devuelve una lista de ejercicios y la sesión avanza automáticamente entre ellos.
+- Estado visible por ejercicio: Pendiente, En curso o Completado.
+- Conservar el temporizador de repetición y descanso, la notificación, el contador y los controles Iniciar, Pausar y Reiniciar.
+- Interfaz en español, con los términos que usan los criterios de aceptación (decisión D2).
+
+**Corrección de defectos (sección 1.4)**
+
+- Impedir que la sesión continúe una vez finalizada.
+- Formatear el tiempo como `mm:ss` fuera del template.
+- Distinguir visualmente la fase de descanso.
+
+**Angular moderno**
+
+- Standalone components, Signals y `computed()`, `inject()`, `input()` y `output()`, `@if` y `@for`, `OnPush`, TypeScript estricto sin `any`.
+- Limpieza correcta del temporizador.
+- Retirada de `zone.js` (decisión D1).
+
+**Calidad**
+
+- Tests unitarios de dominio y casos de uso, y al menos un test de componente presentacional.
+- Escenarios de borde y error, como una lista vacía o datos inválidos.
+
+**Diseño sin implementación**
+
+- Evolución hacia microfrontends y uso de NgRx, descritos en la sección 11.
+
+### 2.2 Fuera del alcance
+
+| Elemento | Motivo |
+|---|---|
+| Implementar Module o Native Federation | El reto solo pide su diseño |
+| Implementar NgRx u otra librería de estado | El reto solo pide su diseño, y Signals cubre el estado de esta feature |
+| Integración con una API real | El reto trabaja con un mock; el puerto `WorkoutRepository` permite añadirla sin cambiar el dominio |
+| Persistencia del progreso | No forma parte de los criterios de aceptación |
+| Enrutamiento | La feature tiene una sola pantalla |
+| Internacionalización | No forma parte de los criterios de aceptación y la interfaz tiene un solo idioma (decisión D2) |
+| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados y el descanso |
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
@@ -74,3 +125,25 @@ La aplicación solo admite un ejercicio. No existe una lista, ni estados por eje
 **Costos.** Los tests de componentes no podrán usar `fakeAsync`, que depende de `zone.js`. La lógica del temporizador se probará en TypeScript puro, por lo que no lo necesita.
 
 **Validación.** Al completar la retirada se compararán el tamaño del build antes y después, y se registrará el resultado en la sección de evidencia.
+
+### D2. Textos de interfaz centralizados, sin i18n
+
+**Contexto.** La aplicación legacy muestra sus textos en inglés, mientras que el reto nombra los estados y controles en español: Pendiente, En curso, Completado, Iniciar, Pausar y Reiniciar. El reto no pide soporte para varios idiomas.
+
+**Decisión.** Mostrar la interfaz en español y centralizar sus textos en un archivo de la capa `presentation`. El dominio expresa los conceptos con valores técnicos sin idioma, como `'pending'`, `'in-progress'` y `'completed'`, y la presentación los convierte en etiquetas.
+
+**Alternativas descartadas.**
+
+| Alternativa | Motivo |
+|---|---|
+| `@angular/localize` | Añade configuración y un build por idioma para una aplicación con un solo idioma |
+| Transloco u otra librería de traducción | Añade una dependencia sin un requisito que la justifique |
+| Textos directos en cada template | Repite los textos y los dispersa entre componentes |
+
+**Justificación.**
+
+- Los tests del dominio no dependen de los textos visibles.
+- `Record<ExerciseStatus, string>` hace que el compilador exija una etiqueta por cada estado.
+- Si en el futuro se requiere i18n, el cambio se limita a la capa `presentation`.
+
+**Costos.** Cambiar los textos actuales de la interfaz. No altera el comportamiento.
