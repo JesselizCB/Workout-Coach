@@ -325,6 +325,8 @@ Si la carga falla o los datos no son válidos, el store pasa a `error` y la pant
 
 Si se vuelve a cargar con una sesión en marcha, el store detiene antes el `Ticker` y descarta la sesión anterior. Mientras llega la nueva no hay sesión, así que pulsar Iniciar no tiene efecto y el reloj no puede correr sobre una sesión que ya se reemplazó.
 
+Hoy la pantalla carga una sola vez, al abrirse. Las cargas simultáneas, por ejemplo con un botón de reintentar pulsado varias veces, quedan fuera del alcance: si se añadieran, el store tendría que descartar las respuestas que lleguen tarde.
+
 ### 5.2 Cuando pasa un segundo
 
 Este es el recorrido que más se repite, así que conviene que sea corto:
