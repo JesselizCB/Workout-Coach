@@ -398,7 +398,7 @@ Se calculan a partir del estado de la sesión, igual que en la versión legacy: 
 | `paused` | Visible | — | Visible |
 | `finished` | Visible y deshabilitado | — | Visible |
 
-Al terminar, Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
+Al terminar, el temporizador muestra "Finalizado" en lugar de la fase, sin el estilo de descanso, aunque la sesión haya acabado con un descanso. Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
 
 ## 7. Plan de implementación
 

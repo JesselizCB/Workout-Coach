@@ -93,6 +93,8 @@ describe('WorkoutPageComponent', () => {
 
     expect(textsOf('.exercise-item__status')).toEqual(['Completado', 'Completado']);
     expect(textOf('.toast')).toBe('Entrenamiento completado');
+    expect(textOf('.phase')).toBe('Finalizado');
+    expect(textOf('.timer')).toBe('00:00');
     expect(button('Iniciar')?.disabled).toBeTrue();
   });
 

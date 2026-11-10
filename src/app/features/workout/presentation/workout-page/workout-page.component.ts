@@ -35,7 +35,7 @@ import {
             <app-workout-timer
               [exerciseName]="session.exercises[session.currentIndex].name"
               [phase]="session.phase"
-              [phaseLabel]="phaseLabels[session.phase]"
+              [phaseLabel]="phaseLabel()"
               [remainingSeconds]="session.remainingSeconds"
               [completedRepetitions]="session.completedRepetitions"
               [totalRepetitions]="session.exercises[session.currentIndex].repetitions"
@@ -55,7 +55,14 @@ import {
 export class WorkoutPageComponent {
   protected readonly store = inject(WorkoutSessionStore);
   protected readonly texts = WORKOUT_TEXTS;
-  protected readonly phaseLabels = PHASE_LABELS;
+
+  protected readonly phaseLabel = computed(() => {
+    const session = this.store.session();
+    if (!session) {
+      return '';
+    }
+    return session.status === 'finished' ? WORKOUT_TEXTS.finished : PHASE_LABELS[session.phase];
+  });
 
   protected readonly toastMessage = computed(() => {
     const event = this.store.session()?.lastEvent;

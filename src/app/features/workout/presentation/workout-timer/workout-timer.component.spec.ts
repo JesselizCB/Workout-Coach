@@ -68,6 +68,13 @@ describe('WorkoutTimerComponent', () => {
     expect(element.querySelector('.phase')?.classList).toContain('phase--rest');
   });
 
+  it('does not use the rest style once the workout is finished', async () => {
+    await render({ phase: 'rest', status: 'finished', remainingSeconds: 0 });
+
+    expect(element.querySelector('.phase')?.classList).not.toContain('phase--rest');
+    expect(element.querySelector('.timer')?.classList).not.toContain('timer--rest');
+  });
+
   describe('controls', () => {
     const table: readonly [SessionStatus, 'enabled' | 'disabled' | 'hidden', boolean][] = [
       ['idle', 'enabled', false],

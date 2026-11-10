@@ -24,6 +24,7 @@ export const WORKOUT_TEXTS = {
   start: 'Iniciar',
   pause: 'Pausar',
   reset: 'Reiniciar',
+  finished: 'Finalizado',
   completedRepetitions: 'Repeticiones completadas',
   repetition: 'repetición',
   repetitions: 'repeticiones',

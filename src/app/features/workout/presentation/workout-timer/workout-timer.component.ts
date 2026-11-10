@@ -8,8 +8,8 @@ import { WORKOUT_TEXTS } from '../workout.labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 class="timer__exercise">{{ exerciseName() }}</h2>
-    <div class="phase" [class.phase--rest]="phase() === 'rest'">{{ phaseLabel() }}</div>
-    <div class="timer" [class.timer--rest]="phase() === 'rest'">{{ time() }}</div>
+    <div class="phase" [class.phase--rest]="resting()">{{ phaseLabel() }}</div>
+    <div class="timer" [class.timer--rest]="resting()">{{ time() }}</div>
     <p class="timer__repetitions">
       {{ texts.completedRepetitions }}: {{ completedRepetitions() }} / {{ totalRepetitions() }}
     </p>
@@ -45,4 +45,5 @@ export class WorkoutTimerComponent {
 
   protected readonly texts = WORKOUT_TEXTS;
   protected readonly time = computed(() => formatTime(this.remainingSeconds()));
+  protected readonly resting = computed(() => this.phase() === 'rest' && this.status() !== 'finished');
 }
