@@ -7,6 +7,8 @@ interface TimerInputs {
   phase: Phase;
   phaseLabel: string;
   remainingSeconds: number;
+  repetitionSeconds: number;
+  restSeconds: number;
   completedRepetitions: number;
   totalRepetitions: number;
   status: SessionStatus;
@@ -17,6 +19,8 @@ const defaults: TimerInputs = {
   phase: 'repetition',
   phaseLabel: 'Ejercicio',
   remainingSeconds: 5,
+  repetitionSeconds: 5,
+  restSeconds: 3,
   completedRepetitions: 0,
   totalRepetitions: 3,
   status: 'idle',
@@ -49,7 +53,8 @@ describe('WorkoutTimerComponent', () => {
 
     expect(text('.timer__exercise')).toBe('Push-ups');
     expect(text('.phase')).toBe('Ejercicio');
-    expect(text('.timer__repetitions')).toBe('Repeticiones completadas: 1 / 2');
+    expect(text('.progress__label')).toBe('Repeticiones completadas');
+    expect(text('.progress__count')).toBe('1 / 2');
   });
 
   it('CA10: shows the remaining time as mm:ss', async () => {
@@ -66,6 +71,81 @@ describe('WorkoutTimerComponent', () => {
     await fixture.whenStable();
 
     expect(element.querySelector('.phase')?.classList).toContain('phase--rest');
+  });
+
+  describe('repetition progress bar', () => {
+    function progressBar(): HTMLElement | null {
+      return element.querySelector('[role="progressbar"]');
+    }
+
+    function segments(): HTMLElement[] {
+      return Array.from(element.querySelectorAll<HTMLElement>('.progress__segment'));
+    }
+
+    function segmentFills(): string[] {
+      return segments().map((segment) => segment.querySelector<HTMLElement>('.progress__fill')?.style.width ?? '');
+    }
+
+    // Squats in these tests: 5 s of exercise + 3 s of rest = an 8 s cycle per repetition.
+
+    it('CA21: shows one segment per repetition', async () => {
+      await render({ totalRepetitions: 3 });
+
+      expect(segments().length).toBe(3);
+    });
+
+    it('CA21: is empty before the first repetition starts', async () => {
+      await render({ completedRepetitions: 0, totalRepetitions: 3, phase: 'repetition', remainingSeconds: 5 });
+
+      expect(segmentFills()).toEqual(['0%', '0%', '0%']);
+    });
+
+    it('CA21: fills the current segment every second', async () => {
+      await render({ completedRepetitions: 0, totalRepetitions: 3, phase: 'repetition', remainingSeconds: 4 });
+      expect(segmentFills()).toEqual(['13%', '0%', '0%']);
+
+      fixture.componentRef.setInput('remainingSeconds', 3);
+      await fixture.whenStable();
+
+      expect(segmentFills()).toEqual(['25%', '0%', '0%']);
+    });
+
+    it('CA21: keeps completed segments full and fills the current one', async () => {
+      await render({ completedRepetitions: 1, totalRepetitions: 3, phase: 'rest', remainingSeconds: 1 });
+
+      expect(segmentFills()).toEqual(['100%', '88%', '0%']);
+      expect(segments()[0].classList).toContain('progress__segment--done');
+      expect(segments()[1].classList).not.toContain('progress__segment--done');
+    });
+
+    it('CA21: completes a segment exactly when its repetition closes', async () => {
+      await render({ completedRepetitions: 0, totalRepetitions: 3, phase: 'rest', remainingSeconds: 1 });
+      expect(segmentFills()).toEqual(['88%', '0%', '0%']);
+
+      fixture.componentRef.setInput('completedRepetitions', 1);
+      fixture.componentRef.setInput('phase', 'repetition');
+      fixture.componentRef.setInput('remainingSeconds', 5);
+      await fixture.whenStable();
+
+      expect(segmentFills()).toEqual(['100%', '0%', '0%']);
+      expect(text('.progress__count')).toBe('1 / 3');
+    });
+
+    it('CA21: fills every segment when the workout is finished', async () => {
+      await render({ completedRepetitions: 3, totalRepetitions: 3, phase: 'rest', remainingSeconds: 0, status: 'finished' });
+
+      expect(segmentFills()).toEqual(['100%', '100%', '100%']);
+    });
+
+    it('CA21: tells screen readers how many repetitions are done', async () => {
+      await render({ completedRepetitions: 1, totalRepetitions: 3 });
+
+      expect(progressBar()?.getAttribute('aria-valuenow')).toBe('1');
+      expect(progressBar()?.getAttribute('aria-valuemin')).toBe('0');
+      expect(progressBar()?.getAttribute('aria-valuemax')).toBe('3');
+      expect(progressBar()?.getAttribute('aria-valuetext')).toBe('1 de 3');
+      expect(progressBar()?.getAttribute('aria-label')).toBe('Progreso de repeticiones');
+    });
   });
 
   it('does not use the rest style once the workout is finished', async () => {
@@ -93,6 +173,18 @@ describe('WorkoutTimerComponent', () => {
         expect(button('Reiniciar')?.disabled).toBeFalse();
       });
     }
+
+    it('gives the main action more visual weight than reset', async () => {
+      await render({ status: 'idle' });
+      expect(button('Iniciar')?.classList).toContain('button--primary');
+      expect(button('Reiniciar')?.classList).toContain('button--secondary');
+
+      fixture.componentRef.setInput('status', 'running');
+      await fixture.whenStable();
+
+      expect(button('Pausar')?.classList).toContain('button--primary');
+      expect(button('Reiniciar')?.classList).toContain('button--secondary');
+    });
 
     it('emits start, pause and reset when their buttons are clicked', async () => {
       const events: string[] = [];

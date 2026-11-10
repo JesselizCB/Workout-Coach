@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ExerciseStatus } from '../../domain/workout-session';
 import { ExerciseItemComponent } from '../exercise-item/exercise-item.component';
 
-/** What the list needs to show for each exercise, already prepared by the container. */
 export interface ExerciseListItem {
   readonly name: string;
   readonly repetitions: number;

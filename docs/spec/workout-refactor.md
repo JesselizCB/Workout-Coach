@@ -73,6 +73,7 @@ El reto deja claro que prefiere poco y bien hecho antes que mucho y a medias. Po
 - Estado visible por ejercicio: Pendiente, En curso o Completado.
 - Conservar el temporizador de repetición y descanso, la notificación, el contador y los controles Iniciar, Pausar y Reiniciar.
 - Interfaz en español, con los términos que usan los criterios de aceptación (decisión D2).
+- Barra de progreso segmentada, con un tramo por repetición del ejercicio actual y el contador destacado (CA21). Se añadió después de la primera entrega (decisión D8).
 
 **Corrección de defectos (sección 1.4)**
 
@@ -107,7 +108,7 @@ Cada cosa que dejo fuera tiene su motivo:
 | Persistencia del progreso | No forma parte de los criterios de aceptación |
 | Enrutamiento | La feature tiene una sola pantalla |
 | Internacionalización | No forma parte de los criterios de aceptación y la interfaz tiene un solo idioma (decisión D2) |
-| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados y el descanso |
+| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados, el descanso, la barra de progreso y la jerarquía de los botones (decisión D9) |
 
 ## 3. Modelo de dominio
 
@@ -175,7 +176,7 @@ Si una operación llega en un estado que no le corresponde, la sesión se devuel
 | `rest` | 1 | Última repetición, quedan ejercicios | Avanza `currentIndex`, reinicia `completedRepetitions` y pasa a `repetition` con el tiempo del siguiente ejercicio | `exercise-completed` |
 | `rest` | 1 | Última repetición del último ejercicio | Suma la repetición, `status` pasa a `finished` y `remainingSeconds` a 0 | `workout-completed` |
 
-Un detalle que conviene tener presente: cada repetición termina con su descanso, también la última de cada ejercicio. Lo exige el criterio de aceptación, que suma la repetición completada justo al terminar el descanso.
+Cada repetición termina con su descanso, también la última de cada ejercicio, porque el criterio de aceptación suma la repetición completada al terminar el descanso.
 
 ### 3.5 Estado de cada ejercicio
 
@@ -228,7 +229,7 @@ Cuando termine la migración, las carpetas legacy `components/` y `services/` de
 
 ### 4.2 Reglas de dependencia
 
-La regla de oro es que las dependencias siempre apuntan hacia el dominio:
+Las dependencias siempre apuntan hacia el dominio:
 
 | Capa | Puede importar | No puede importar |
 |---|---|---|
@@ -384,7 +385,7 @@ Ninguno inyecta dependencias.
 
 | Componente | Recibe (`input`) | Emite (`output`) | Qué hace |
 |---|---|---|---|
-| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y decide qué botones mostrar según la tabla 6.3 |
+| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, segundos de ejercicio y de descanso del ejercicio actual, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase, el contador destacado y una barra segmentada con un tramo por repetición, y decide qué botones mostrar según la tabla 6.3 |
 | `ExerciseListComponent` | Lista de ejercicios con su estado | — | Recorre la lista con `@for` |
 | `ExerciseItemComponent` | Nombre, repeticiones, estado y su etiqueta | — | Muestra un ejercicio y marca su estado con una clase CSS |
 | `WorkoutToastComponent` | Mensaje o `null` | — | Muestra la notificación, si la hay |
@@ -463,6 +464,7 @@ Salen de los defectos de la sección 1.4 y de las decisiones de diseño.
 | CA14 | Al salir de la pantalla, el temporizador se detiene | Test del store al destruirse |
 | CA15 | Si la lista está vacía o trae datos inválidos, se muestra un mensaje de error en lugar de la sesión | Tests de dominio y del caso de uso |
 | CA16 | Si la carga falla, se muestra un mensaje de error | Test del caso de uso y del store |
+| CA21 | Una barra segmentada, con un tramo por repetición del ejercicio actual, muestra el avance: los tramos completados están llenos, el actual se llena cada segundo y se completa exactamente al cerrar su repetición, y la barra vuelve a empezar en el siguiente ejercicio. El contador "1 / 3" se muestra destacado como título de la barra | Tests del temporizador y del container |
 
 ### 8.3 Criterios técnicos
 
@@ -561,9 +563,9 @@ Además de los tests, cargué la app en Chrome sin interfaz gráfica en tres mom
 | App nueva, pantalla inicial | Squats, `00:05`, `0 / 3`, tres ejercicios en Pendiente |
 | App nueva en modo zoneless, unos 6,5 s después de pulsar Iniciar | Descanso, `00:02`, "Tiempo de descanso", En curso / Pendiente / Pendiente |
 
-### 10.6 Revisión independiente
+### 10.6 Revisión de código
 
-Cada tramo de código se pasó por una revisión automática independiente, centrada en fiabilidad, antes de continuar. Las siete revisiones terminaron aprobadas. Sus observaciones se resolvieron así:
+Cada tramo de código pasó por una revisión de fiabilidad antes de continuar, y todas terminaron aprobadas. Sus observaciones se resolvieron así:
 
 | Observación | Qué se hizo |
 |---|---|
@@ -586,6 +588,21 @@ Cada tramo de código se pasó por una revisión automática independiente, cent
 | W4. Presentación | `a197766`, `23c5eb4` a `f2f53c8` |
 | W5. Retirada del legacy | `6ec0966` |
 | W6. Zoneless | `0bc354b` a `aac8343` |
+
+### 10.8 Actualización: barra de progreso y botones (CA21, D8 y D9)
+
+Medido en la rama `feat/repetition-progress`, después de añadir la barra de la decisión D8 y la jerarquía de botones de la decisión D9.
+
+| Comprobación | Resultado |
+|---|---|
+| `npm test` | 118 tests en verde |
+| Cobertura | 99,44 % de sentencias (180 de 181), 93,87 % de ramas (46 de 49), 100 % de funciones (55 de 55), 99,4 % de líneas (167 de 168) |
+| Total transferido | 39,30 kB, 0,81 kB más que antes de la barra y los botones |
+| Contraste de los botones | Texto blanco sobre azul: 4,63:1, por encima del 4,5:1 de WCAG AA |
+| Navegador, pantalla inicial | Iniciar en azul como acción principal y Reiniciar con borde como secundaria |
+| Navegador, al terminar | Todos los tramos en verde, contador "2 / 2" e Iniciar deshabilitado en gris |
+| Navegador, segunda repetición de Squats | Contador "1 / 3", primer tramo completo en verde, segundo al 38 % y tercero vacío |
+| Navegador, al pasar a Push-ups | Contador "0 / 2" y dos tramos vacíos |
 
 ## 11. Extensión: microfrontends y NgRx
 
@@ -731,3 +748,41 @@ Hay un paso intermedio que también consideraría: **NgRx SignalStore**, que man
 **Decisión.** El container muestra "Finalizado" cuando la sesión terminó, y el temporizador no aplica el estilo de descanso en ese caso. El dominio no cambia.
 
 **Justificación.** Para el dominio, la fase de una sesión terminada no tiene significado. Lo que mostrar en pantalla es responsabilidad de la presentación.
+
+### D8. Barra de progreso de repeticiones
+
+**Contexto.** Después de la primera entrega, al probar la app, la interfaz se sentía demasiado sencilla. El avance de las repeticiones solo se veía como el texto "1 / 3".
+
+**Decisión.** Una barra segmentada, con un tramo por repetición del ejercicio actual, y el contador "1 / 3" destacado como título de la barra. La cantidad de tramos ya muestra cuántas repeticiones hay, y su estado muestra cuántas van:
+
+- Los tramos de las repeticiones completadas están llenos, en verde.
+- El tramo de la repetición en curso se llena cada segundo, en azul.
+- Los tramos siguientes están vacíos.
+
+```text
+relleno del tramo actual = segundos transcurridos del ciclo / segundos del ciclo
+```
+
+El ciclo de una repetición es su tiempo de ejercicio más su descanso, porque la repetición se cuenta al terminar el descanso. Por eso el tramo se completa exactamente cuando el contador pasa, por ejemplo, de "0 / 3" a "1 / 3".
+
+Se calcula en la presentación con datos que la sesión ya tiene, así que el dominio no cambia. La barra usa `role="progressbar"` con `aria-valuenow`, `aria-valuemax` y `aria-valuetext`. Para un lector de pantalla, el valor son las repeticiones enteras, por ejemplo "1 de 3", porque anunciar un porcentaje cada segundo sería ruido.
+
+**Alternativas descartadas.**
+
+| Alternativa | Motivo |
+|---|---|
+| Barra continua a saltos por repetición | Fue la primera versión. Se veía estática varios segundos y luego saltaba un tercio de golpe |
+| Barra continua que avanza por segundos | Fue la segunda versión. Mejoraba el movimiento, pero el contador seguía siendo una línea de texto poco visible |
+| Contador grande sin barra, o puntos por repetición | Más visible, pero suma un elemento aparte en lugar de unir el conteo y el avance |
+| Progreso del tiempo de la fase actual | Repite la información del reloj y se vacía en cada fase, sin mostrar el avance del ejercicio |
+| Progreso del entrenamiento completo | Mezcla ejercicios con distinto número de repeticiones y es menos claro para el usuario |
+
+**Limitación.** Con muchas repeticiones, por ejemplo más de 15, los tramos quedarían muy finos. Con los ejercicios actuales, de 2 y 3 repeticiones, no ocurre. Si hiciera falta, la barra podría volver a ser continua a partir de cierto número de repeticiones.
+
+### D9. Jerarquía visual de los controles
+
+**Contexto.** Los tres botones usaban el estilo por defecto del navegador, así que Reiniciar, que borra todo el progreso, pesaba visualmente lo mismo que la acción principal.
+
+**Decisión.** Iniciar y Pausar se muestran como acción principal, en azul con texto blanco (contraste 4,63:1, por encima del 4,5:1 de WCAG AA). Reiniciar se muestra como acción secundaria, con borde y sin relleno. Todos tienen un foco visible al navegar con teclado. Los estilos viven dentro del temporizador, sin tocar el CSS global.
+
+**Justificación.** No es un rediseño: da jerarquía a las acciones y reduce el riesgo de reiniciar por error.

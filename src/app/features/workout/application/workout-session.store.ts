@@ -13,10 +13,6 @@ import { LoadWorkoutUseCase } from './load-workout.use-case';
 
 export type LoadStatus = 'loading' | 'ready' | 'error';
 
-/**
- * Holds the workout session in signals and connects the domain with the clock.
- * Provided by the page container, so it lives and dies with the screen.
- */
 @Injectable()
 export class WorkoutSessionStore {
   private readonly loadWorkout = inject(LoadWorkoutUseCase);
@@ -41,7 +37,7 @@ export class WorkoutSessionStore {
     this.ticker.stop();
     this.sessionState.set(null);
     this.loadStatusState.set('loading');
-    // Without zone.js, Angular only waits for work it is told about: the app stays unstable until loading ends.
+    // Without zone.js, Angular only waits for registered tasks.
     const loadingDone = this.pendingTasks.add();
     try {
       this.sessionState.set(await this.loadWorkout.execute());

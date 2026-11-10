@@ -1,7 +1,5 @@
 import { ExerciseStatus, Phase, SessionEvent } from '../domain/workout-session';
 
-// User-facing texts live here so the domain stays language-free (spec decision D2).
-
 export const EXERCISE_STATUS_LABELS: Record<ExerciseStatus, string> = {
   pending: 'Pendiente',
   'in-progress': 'En curso',
@@ -26,6 +24,8 @@ export const WORKOUT_TEXTS = {
   reset: 'Reiniciar',
   finished: 'Finalizado',
   completedRepetitions: 'Repeticiones completadas',
+  repetitionProgress: 'Progreso de repeticiones',
+  of: 'de',
   repetition: 'repetición',
   repetitions: 'repeticiones',
   loading: 'Cargando entrenamiento…',

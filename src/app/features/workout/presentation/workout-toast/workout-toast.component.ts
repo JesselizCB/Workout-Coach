@@ -1,9 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/**
- * The host is always present as a status live region; only its content changes.
- * Screen readers announce changes only in regions that already existed on the page.
- */
+// The live region must exist before a message arrives, or screen readers will not announce it.
 @Component({
   selector: 'app-workout-toast',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,4 +1,3 @@
-/** Exercise as it comes from the external source, in its original snake_case format. */
 export interface ExerciseDto {
   readonly exercise_name: string;
   readonly repetitions_number: number;

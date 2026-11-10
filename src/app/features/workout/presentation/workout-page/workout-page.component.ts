@@ -10,10 +10,6 @@ import {
   WORKOUT_TEXTS,
 } from '../workout.labels';
 
-/**
- * Container of the workout screen: the only component that talks to the store.
- * It turns the session into what each presentational component needs.
- */
 @Component({
   selector: 'app-workout-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +33,8 @@ import {
               [phase]="session.phase"
               [phaseLabel]="phaseLabel()"
               [remainingSeconds]="session.remainingSeconds"
+              [repetitionSeconds]="session.exercises[session.currentIndex].repetitionSeconds"
+              [restSeconds]="session.exercises[session.currentIndex].restSeconds"
               [completedRepetitions]="session.completedRepetitions"
               [totalRepetitions]="session.exercises[session.currentIndex].repetitions"
               [status]="session.status"
