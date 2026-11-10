@@ -3,7 +3,6 @@ import { Phase, SessionStatus } from '../../domain/workout-session';
 import { formatTime } from '../format-time';
 import { WORKOUT_TEXTS } from '../workout.labels';
 
-/** One segment of the repetition progress bar. */
 interface ProgressSegment {
   readonly fill: number;
   readonly done: boolean;
@@ -128,17 +127,13 @@ export class WorkoutTimerComponent {
   protected readonly time = computed(() => formatTime(this.remainingSeconds()));
   protected readonly resting = computed(() => this.phase() === 'rest' && this.status() !== 'finished');
 
-  /**
-   * Share of the current repetition already elapsed. A repetition is a cycle of exercise
-   * plus rest, because it only counts as completed when its rest ends.
-   */
+  // A repetition only counts when its rest ends, so its cycle is exercise plus rest.
   private readonly currentCycleShare = computed(() => {
     const cycleSeconds = this.repetitionSeconds() + this.restSeconds();
     const phaseOffset = this.phase() === 'repetition' ? this.repetitionSeconds() : cycleSeconds;
     return (phaseOffset - this.remainingSeconds()) / cycleSeconds;
   });
 
-  /** One segment per repetition: completed ones full, the current one filling every second. */
   protected readonly segments = computed<readonly ProgressSegment[]>(() => {
     const completed = this.completedRepetitions();
     const currentFill = Math.min(100, Math.round(this.currentCycleShare() * 100));

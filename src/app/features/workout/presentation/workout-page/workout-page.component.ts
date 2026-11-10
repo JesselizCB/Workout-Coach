@@ -10,10 +10,6 @@ import {
   WORKOUT_TEXTS,
 } from '../workout.labels';
 
-/**
- * Container of the workout screen: the only component that talks to the store.
- * It turns the session into what each presentational component needs.
- */
 @Component({
   selector: 'app-workout-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
