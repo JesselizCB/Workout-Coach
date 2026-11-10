@@ -48,6 +48,12 @@ describe('createSession', () => {
     });
   }
 
+  it('CA15: rejects an exercise whose name is not text, as malformed external data could send', () => {
+    const malformed = { ...squats, name: undefined } as unknown as Exercise;
+
+    expect(() => createSession([malformed])).toThrowError(InvalidWorkoutError);
+  });
+
   const numericFields = ['repetitions', 'repetitionSeconds', 'restSeconds'] as const;
   const invalidValues = [0, -1, 1.5, Number.NaN];
 
