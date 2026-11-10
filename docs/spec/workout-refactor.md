@@ -1,6 +1,6 @@
 # Especificación: evolución de Workout Coach
 
-> **Estado:** en elaboración. Voy actualizando este documento cada vez que cambia una decisión.
+> **Estado:** implementada. El documento refleja la solución entregada. Las decisiones que cambiaron o surgieron durante el desarrollo están en la sección 12, y la evidencia de build y tests, en la sección 10.
 
 ## 1. Contexto y problema
 
@@ -150,6 +150,7 @@ interface WorkoutSession {
 Una sesión solo se puede crear con datos válidos. Si algo no cuadra, se lanza un error de dominio y la sesión no llega a existir:
 
 - La lista contiene al menos un ejercicio.
+- Cada ejercicio tiene un nombre que no está vacío ni formado solo por espacios.
 - `repetitions`, `repetitionSeconds` y `restSeconds` son enteros mayores o iguales a 1.
 
 ### 3.3 Operaciones
@@ -218,6 +219,8 @@ src/app/features/workout/
 │  ├─ exercise-item/
 │  ├─ workout-toast/
 │  └─ workout.labels.ts
+├─ testing/
+│  └─ fake-ticker.ts
 └─ workout.providers.ts
 ```
 
@@ -254,6 +257,8 @@ Uso clases abstractas en lugar de interfaces por un motivo práctico: una interf
 `getExercises` devuelve una `Promise` aunque hoy el mock responda al instante. El día que llegue una API real, el contrato será el mismo.
 
 `Ticker` envuelve el reloj real. En los tests lo cambio por uno falso y avanzo el tiempo a mano, sin esperar segundos reales y sin depender de `fakeAsync` (decisión D1).
+
+`Ticker` se registra una sola vez para toda la aplicación y admite un único consumidor. Hoy es suficiente, porque hay una sola pantalla de entrenamiento. Si en el futuro convivieran varias sesiones a la vez, cada una necesitaría su propio `Ticker`, ya que una podría detener el reloj de la otra.
 
 ### 4.4 Infraestructura
 
@@ -320,6 +325,12 @@ Usuario ────────> Presentacional ───────> Containe
 
 Si la carga falla o los datos no son válidos, el store pasa a `error` y la pantalla muestra un mensaje en lugar de la sesión.
 
+Mientras la carga está en curso, el store la registra en `PendingTasks`. Sin `zone.js`, Angular solo espera el trabajo asíncrono que se le declara, así que esto mantiene la aplicación "inestable" hasta que llegan los datos, tanto si la carga sale bien como si falla. Es lo que permite que los tests y un eventual renderizado en servidor esperen a la sesión.
+
+Si se vuelve a cargar con una sesión en marcha, el store detiene antes el `Ticker` y descarta la sesión anterior. Mientras llega la nueva no hay sesión, así que pulsar Iniciar no tiene efecto y el reloj no puede correr sobre una sesión que ya se reemplazó.
+
+Hoy la pantalla carga una sola vez, al abrirse. Las cargas simultáneas, por ejemplo con un botón de reintentar pulsado varias veces, quedan fuera del alcance: si se añadieran, el store tendría que descartar las respuestas que lleguen tarde.
+
 ### 5.2 Cuando pasa un segundo
 
 Este es el recorrido que más se repite, así que conviene que sea corto:
@@ -363,7 +374,7 @@ WorkoutPageComponent (container)
 
 ### 6.1 `WorkoutPageComponent`, el container
 
-Provee `WorkoutSessionStore`, lo inyecta con `inject()` y llama a `load()` al crearse. Su trabajo es traducir el estado del store a lo que necesita cada componente hijo, y para eso usa `computed()`: busca los textos en `workout.labels.ts`, arma la lista de ejercicios con su estado y decide qué controles están disponibles.
+Provee `WorkoutSessionStore`, lo inyecta con `inject()` y llama a `load()` al crearse. Su trabajo es traducir el estado del store a lo que necesita cada componente hijo, y para eso usa `computed()`: busca los textos en `workout.labels.ts`, arma la lista de ejercicios con su estado y entrega al temporizador el estado de la sesión.
 
 También se encarga de los estados de carga. Mientras `loadStatus` vale `loading` muestra un aviso de carga, y si vale `error` muestra un mensaje en lugar de la sesión.
 
@@ -373,7 +384,7 @@ Ninguno inyecta dependencias.
 
 | Componente | Recibe (`input`) | Emite (`output`) | Qué hace |
 |---|---|---|---|
-| `WorkoutTimerComponent` | Nombre del ejercicio, fase, segundos restantes, repeticiones hechas y totales, controles disponibles | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y los botones |
+| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y decide qué botones mostrar según la tabla 6.3 |
 | `ExerciseListComponent` | Lista de ejercicios con su estado | — | Recorre la lista con `@for` |
 | `ExerciseItemComponent` | Nombre, repeticiones, estado y su etiqueta | — | Muestra un ejercicio y marca su estado con una clase CSS |
 | `WorkoutToastComponent` | Mensaje o `null` | — | Muestra la notificación, si la hay |
@@ -393,7 +404,7 @@ Se calculan a partir del estado de la sesión, igual que en la versión legacy: 
 | `paused` | Visible | — | Visible |
 | `finished` | Visible y deshabilitado | — | Visible |
 
-Al terminar, Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
+Al terminar, el temporizador muestra "Finalizado" en lugar de la fase, sin el estilo de descanso, aunque la sesión haya acabado con un descanso. Iniciar queda deshabilitado en lugar de desaparecer. El dominio ya ignora un `start` sobre una sesión terminada, pero así el usuario entiende que la sesión acabó y que para repetirla tiene que reiniciar.
 
 ## 7. Plan de implementación
 
@@ -486,13 +497,95 @@ Los puertos de la sección 4.3 son los que permiten reemplazar las piezas difíc
 
 ### 9.3 Componentes y zoneless
 
-En los tests de componentes paso los datos con `fixture.componentRef.setInput()` y espero el render con `await fixture.whenStable()`. Funcionan igual con `zone.js` y sin él, de modo que el bloque W6 no obliga a reescribirlos. En W6 se agrega `provideZonelessChangeDetection()` a la configuración de TestBed, para que los tests se ejecuten en el mismo modo que la app.
+En los tests de componentes paso los datos con `fixture.componentRef.setInput()`, activo `fixture.autoDetectChanges()` y espero el render con `await fixture.whenStable()`. Con `zone.js`, `whenStable()` por sí solo no ejecuta la detección de cambios, y el primer test de componente falló justamente por eso. Con la detección automática activada, los tests funcionan igual con `zone.js` y sin él, de modo que el bloque W6 no obliga a reescribirlos. En W6 se quitaron `zone.js` y `zone.js/testing` de los `polyfills` de test, y `src/zoneless-testing.spec.ts` agrega `provideZonelessChangeDetection()` a todos los TestBed con un `beforeEach` global. Así los tests corren en el mismo modo que la app, y ningún test nuevo puede olvidarse de configurarlo.
+
+`testing/fake-ticker.ts` contiene el `Ticker` falso. Lo comparten los tests del store y del container, y queda fuera de las cuatro capas porque solo existe para probar.
 
 ### 9.4 Trazabilidad y cobertura
 
-Cada test nombra el criterio de la sección 8 que cubre, por ejemplo `it('CA4: suma una repetición al terminar el descanso', ...)`. Así es fácil comprobar que no quedó ningún criterio sin test.
+Cada test nombra el criterio de la sección 8 que cubre, por ejemplo `it('CA4: adds a completed repetition when the rest ends', ...)`. Los nombres de los tests están en inglés, igual que el resto del código. Así es fácil comprobar que no quedó ningún criterio sin test.
 
 La cobertura se mide con `ng test --code-coverage` y se registra en la sección 10. No fijo un porcentaje como meta, porque se puede tener mucha cobertura y aun así dejar sin probar lo que importa. La meta real es que cada criterio automatizable tenga su test.
+
+## 10. Evidencia de build y tests
+
+Todo lo de esta sección se obtuvo en la rama `refactor/workout-architecture`, sobre el commit `aac8343`.
+
+### 10.1 Comandos
+
+| Comando | Resultado |
+|---|---|
+| `npm run build` | Compila sin errores ni avisos |
+| `npm test` | 109 tests en verde, sin avisos en consola |
+| `npx ng test --watch=false --code-coverage` | Cobertura de la sección 10.2 |
+| `npm start` | La app arranca en `http://localhost:4200` |
+
+### 10.2 Cobertura
+
+| Métrica | Resultado |
+|---|---|
+| Sentencias | 99,4 % (167 de 168) |
+| Ramas | 93,02 % (40 de 43) |
+| Funciones | 100 % (51 de 51) |
+| Líneas | 99,35 % (155 de 156) |
+
+Lo que queda sin cubrir son tres comprobaciones defensivas para cuando todavía no hay sesión: el valor vacío de `exerciseStatuses` en el store y dos `computed()` del container. El template solo muestra esos datos cuando la sesión existe, así que la interfaz no puede llegar a esas ramas. No agregué tests artificiales para ellas, porque la meta de la sección 9.4 es cubrir los criterios, no el porcentaje.
+
+### 10.3 Criterios técnicos
+
+| ID | Comprobación | Resultado |
+|---|---|---|
+| CA17 | Imports de Angular en `domain` / imports de `infrastructure` en `presentation` o `application` | 0 / 0 |
+| CA18 | `any` en todo `src/` | 0 |
+| CA19 | Componentes con `OnPush` / componentes presentacionales que inyectan dependencias | 6 de 6 / 0 (solo el container usa `inject()`) |
+| CA20 | Build y tests sin `zone.js` | Pasan, sin avisos `NG0908` ni `NG0914` |
+
+Los criterios funcionales CA1 a CA16 tienen cada uno al menos un test que lleva su ID en el nombre (sección 9.4). CA11 se comprobó además en el navegador, donde la fase de descanso aplica la clase `phase--rest`.
+
+### 10.4 Tamaño del build (decisión D1)
+
+| | Con `zone.js` (`8372c1c`) | Sin `zone.js` (`aac8343`) | Diferencia |
+|---|---|---|---|
+| `main.js` | 128,66 kB | 129,02 kB | +0,36 kB |
+| `polyfills.js` | 34,59 kB | — | Eliminado |
+| Total inicial | 163,64 kB | 129,41 kB | −21 % |
+| Total transferido | 49,77 kB | 38,49 kB | **−23 %** |
+
+### 10.5 Comprobaciones en el navegador
+
+Además de los tests, cargué la app en Chrome sin interfaz gráfica en tres momentos:
+
+| Prueba | Resultado |
+|---|---|
+| Componente legacy en modo zoneless, tras pulsar Start (antes del refactor) | El temporizador se queda en `00:05` |
+| App nueva, pantalla inicial | Squats, `00:05`, `0 / 3`, tres ejercicios en Pendiente |
+| App nueva en modo zoneless, unos 6,5 s después de pulsar Iniciar | Descanso, `00:02`, "Tiempo de descanso", En curso / Pendiente / Pendiente |
+
+### 10.6 Revisión independiente
+
+Cada tramo de código se pasó por una revisión automática independiente, centrada en fiabilidad, antes de continuar. Las siete revisiones terminaron aprobadas. Sus observaciones se resolvieron así:
+
+| Observación | Qué se hizo |
+|---|---|
+| Un ejercicio sin nombre pasaba la validación | Corregido (`2f29f93`, `7e954c0`) |
+| El reloj seguía activo al recargar | Corregido (`075b05f`, `b8fe84b`) |
+| La pantalla final mostraba "Descanso 00:00" | Corregido (`824ad16`) |
+| Las cargas simultáneas pueden pisarse | Fuera de alcance, documentado en la sección 5.1 (`8372c1c`) |
+| `Ticker` es único para toda la app | Limitación aceptada, documentada en la sección 4.3 y en la decisión D5 |
+
+### 10.7 Historial
+
+| Etapa | Commits |
+|---|---|
+| Código original | `1ab1c9a` |
+| Reparación de la base | `4b73a4f` a `eb1ed61`, marcado con el tag `legacy-baseline` |
+| Spec | `8c69940` a `3aa9e48` |
+| W1. Dominio | `162fd2b` a `74b04b6` |
+| W2. Infraestructura | `8511402`, `e5edf86` |
+| W3. Aplicación | `8c131a1`, `814d272` |
+| W4. Presentación | `a197766`, `23c5eb4` a `f2f53c8` |
+| W5. Retirada del legacy | `6ec0966` |
+| W6. Zoneless | `0bc354b` a `aac8343` |
 
 ## 11. Extensión: microfrontends y NgRx
 
@@ -571,7 +664,7 @@ Hay un paso intermedio que también consideraría: **NgRx SignalStore**, que man
 
 **Costos.** Los tests de componentes no podrán usar `fakeAsync`, que depende de `zone.js`. La lógica del temporizador se probará en TypeScript puro, por lo que no lo necesita.
 
-**Validación.** Al completar la retirada se compararán el tamaño del build antes y después, y se registrará el resultado en la sección de evidencia.
+**Validación.** La retirada se completó en W6. El total transferido bajó de 49,77 kB a 38,49 kB, un 23 % menos, y los tests corren sin `zone.js` (sección 10.4). `zone.js` sigue apareciendo en `package-lock.json` solo como dependencia opcional de `@angular/core`, pero no se carga en la app ni en los tests, y el bundle no contiene nada de él.
 
 ### D2. Textos de interfaz centralizados, sin i18n
 
@@ -606,3 +699,35 @@ Hay un paso intermedio que también consideraría: **NgRx SignalStore**, que man
 **Justificación.** Todo el flujo de la sesión se lee en un solo lugar, y esos métodos se prueban igual que un caso de uso.
 
 **Costos.** Si los controles ganaran reglas propias, habría que extraerlos a casos de uso independientes.
+
+### D4. La carga se declara como tarea pendiente
+
+**Contexto.** Al pasar a zoneless, el test de `AppComponent` falló. Sin `zone.js`, Angular solo considera pendiente el trabajo asíncrono que se le declara, así que `whenStable()` terminaba antes de que llegaran los ejercicios.
+
+**Decisión.** `load()` registra la carga en `PendingTasks` y la libera en un `finally`, tanto si sale bien como si falla.
+
+**Justificación.** Es la práctica que recomienda Angular para zoneless. Además de los tests, la necesitaría un renderizado en servidor, que también espera a que la app esté estable.
+
+### D5. Un único `Ticker` para la aplicación
+
+**Contexto.** El store se crea uno por pantalla, mientras que `IntervalTicker` se registra una sola vez en la raíz de composición.
+
+**Decisión.** Mantener un `Ticker` único y documentar que admite un solo consumidor (sección 4.3).
+
+**Alternativa descartada.** Proveer un `Ticker` por pantalla obligaría al container a conocer `IntervalTicker`, lo que rompe la regla de que `presentation` no importa `infrastructure`, o a añadir una fábrica intermedia para un caso que hoy no existe.
+
+### D6. El temporizador decide qué controles mostrar
+
+**Contexto.** La primera versión de la sección 6 asignaba esa decisión al container.
+
+**Decisión.** El container entrega el estado de la sesión y `WorkoutTimerComponent` aplica la tabla 6.3.
+
+**Justificación.** La regla queda probada en el mismo componente que la aplica, y el container se limita a traducir datos.
+
+### D7. "Finalizado" se resuelve en la presentación
+
+**Contexto.** Al terminar, la sesión conserva la fase `rest` del último descanso, y la pantalla mostraba "Descanso 00:00".
+
+**Decisión.** El container muestra "Finalizado" cuando la sesión terminó, y el temporizador no aplica el estilo de descanso en ese caso. El dominio no cambia.
+
+**Justificación.** Para el dominio, la fase de una sesión terminada no tiene significado. Lo que mostrar en pantalla es responsabilidad de la presentación.
