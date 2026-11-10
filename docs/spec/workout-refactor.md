@@ -180,6 +180,110 @@ El estado de un ejercicio **se deriva** de la sesión y no se almacena, de modo 
 | Índice igual a `currentIndex` | `in-progress` |
 | Índice mayor que `currentIndex` | `pending` |
 
+## 4. Capas y contratos
+
+### 4.1 Estructura
+
+```text
+src/app/features/workout/
+├─ domain/
+│  ├─ exercise.ts
+│  ├─ workout-session.ts
+│  ├─ workout.errors.ts
+│  └─ ports/
+│     ├─ workout.repository.ts
+│     └─ ticker.ts
+├─ application/
+│  ├─ load-workout.use-case.ts
+│  └─ workout-session.store.ts
+├─ infrastructure/
+│  ├─ exercise.dto.ts
+│  ├─ exercise.mapper.ts
+│  ├─ mock-workout.repository.ts
+│  └─ interval-ticker.ts
+├─ presentation/
+│  ├─ workout-page/
+│  ├─ workout-timer/
+│  ├─ exercise-list/
+│  ├─ exercise-item/
+│  ├─ workout-toast/
+│  └─ workout.labels.ts
+└─ workout.providers.ts
+```
+
+Las carpetas legacy `components/` y `services/` se eliminan al completar la migración.
+
+### 4.2 Reglas de dependencia
+
+| Capa | Puede importar | No puede importar |
+|---|---|---|
+| `domain` | Nada externo | Angular, RxJS, otras capas |
+| `application` | `domain`, Angular | `infrastructure`, `presentation` |
+| `infrastructure` | `domain` | `application`, `presentation` |
+| `presentation` | `application`, `domain`, Angular | `infrastructure` |
+
+`workout.providers.ts` es la **raíz de composición**: el único archivo que conoce las implementaciones concretas y las asocia a sus puertos. Queda fuera de las cuatro capas y se registra en la configuración de la aplicación.
+
+### 4.3 Puertos
+
+```ts
+abstract class WorkoutRepository {
+  abstract getExercises(): Promise<readonly Exercise[]>;
+}
+
+abstract class Ticker {
+  abstract start(onTick: () => void): void;
+  abstract stop(): void;
+}
+```
+
+- Son clases abstractas porque, a diferencia de una interface, existen en ejecución y sirven como token de inyección sin que el dominio importe Angular.
+- `getExercises` devuelve una `Promise`, de modo que sustituir el mock por una API real no cambia el contrato.
+- `Ticker` aísla el reloj real. Los tests usan un `Ticker` falso y avanzan el tiempo manualmente, sin depender de `fakeAsync` (decisión D1).
+
+### 4.4 Infraestructura
+
+El DTO conserva el formato externo y se traduce al modelo de dominio únicamente en esta capa.
+
+```ts
+interface ExerciseDto {
+  readonly exercise_name: string;
+  readonly repetitions_number: number;
+  readonly repetition_time: number;
+  readonly rest_time: number;
+}
+```
+
+| `ExerciseDto` | `Exercise` |
+|---|---|
+| `exercise_name` | `name` |
+| `repetitions_number` | `repetitions` |
+| `repetition_time` | `repetitionSeconds` |
+| `rest_time` | `restSeconds` |
+
+### 4.5 Aplicación
+
+`LoadWorkoutUseCase` obtiene los ejercicios del repositorio y crea la sesión inicial. Los errores de carga o de datos inválidos llegan a quien lo invoca.
+
+`WorkoutSessionStore` mantiene el estado en Signals y coordina el dominio con el `Ticker`. Se provee a nivel del container, por lo que su ciclo de vida coincide con el de la pantalla y detiene el `Ticker` al destruirse.
+
+```ts
+type LoadStatus = 'loading' | 'ready' | 'error';
+
+class WorkoutSessionStore {
+  readonly loadStatus: Signal<LoadStatus>;
+  readonly session: Signal<WorkoutSession | null>;
+  readonly exerciseStatuses: Signal<readonly ExerciseStatus[]>;
+
+  load(): Promise<void>;
+  start(): void;
+  pause(): void;
+  reset(): void;
+}
+```
+
+Iniciar, pausar y reiniciar no se separan en clases propias: cada una sería una sola línea que delega en el dominio, y añadirían indirección sin aportar comportamiento.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
@@ -226,3 +330,15 @@ El estado de un ejercicio **se deriva** de la sesión y no se almacena, de modo 
 - Si en el futuro se requiere i18n, el cambio se limita a la capa `presentation`.
 
 **Costos.** Cambiar los textos actuales de la interfaz. No altera el comportamiento.
+
+### D3. Controles de la sesión como métodos del store
+
+**Contexto.** El reto pide orquestar casos de uso. Cargar el entrenamiento accede a un puerto y crea la sesión, mientras que iniciar, pausar y reiniciar solo delegan en funciones puras del dominio.
+
+**Decisión.** `LoadWorkoutUseCase` es una clase propia. Iniciar, pausar y reiniciar son métodos de `WorkoutSessionStore`, que además coordina el `Ticker`.
+
+**Alternativa descartada.** Una clase por acción coincide literalmente con el término "caso de uso", pero serían clases de una línea que añaden indirección sin aportar comportamiento.
+
+**Justificación.** Todo el flujo de la sesión se lee en un solo lugar, y esos métodos se prueban igual que un caso de uso.
+
+**Costos.** Si los controles ganaran reglas propias, habría que extraerlos a casos de uso independientes.
