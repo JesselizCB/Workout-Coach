@@ -1,6 +1,6 @@
 import { Exercise } from './exercise';
 import { InvalidWorkoutError } from './workout.errors';
-import { createSession, pause, start, WorkoutSession } from './workout-session';
+import { createSession, pause, reset, start, WorkoutSession } from './workout-session';
 
 const squats: Exercise = { name: 'Squats', repetitions: 3, repetitionSeconds: 5, restSeconds: 3 };
 const pushUps: Exercise = { name: 'Push-ups', repetitions: 2, repetitionSeconds: 4, restSeconds: 2 };
@@ -97,6 +97,24 @@ describe('pause', () => {
       const session = sessionWith({ status });
 
       expect(pause(session)).toBe(session);
+    });
+  }
+});
+
+describe('reset', () => {
+  const progressed = {
+    currentIndex: 1,
+    phase: 'rest',
+    remainingSeconds: 1,
+    completedRepetitions: 1,
+    lastEvent: 'rest-started',
+  } as const;
+
+  for (const status of ['idle', 'running', 'paused', 'finished'] as const) {
+    it(`CA8: returns a ${status} session to its initial state`, () => {
+      const session = sessionWith({ ...progressed, status });
+
+      expect(reset(session)).toEqual(createSession([squats, pushUps]));
     });
   }
 });

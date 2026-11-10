@@ -53,6 +53,10 @@ export function pause(session: WorkoutSession): WorkoutSession {
   return { ...session, status: 'paused' };
 }
 
+export function reset(session: WorkoutSession): WorkoutSession {
+  return createSession(session.exercises);
+}
+
 function assertValidExercise(exercise: Exercise): void {
   for (const field of POSITIVE_INTEGER_FIELDS) {
     const value = exercise[field];
