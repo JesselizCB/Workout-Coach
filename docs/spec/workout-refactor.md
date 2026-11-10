@@ -284,6 +284,55 @@ class WorkoutSessionStore {
 
 Iniciar, pausar y reiniciar no se separan en clases propias: cada una sería una sola línea que delega en el dominio, y añadirían indirección sin aportar comportamiento.
 
+## 5. Flujo de datos
+
+La idea general es sencilla: los datos bajan y los eventos suben. Los componentes presentacionales reciben lo que muestran por `input()` y avisan de lo que pasa por `output()`. El único que habla con el store es el container.
+
+```text
+          click                 output()
+Usuario ────────> Presentacional ───────> Container ───> Store ───> Dominio
+                                                           │
+   Vista <──────── Presentacional <─────── Container <─────┘
+                       input()             signals
+```
+
+### 5.1 Al abrir la pantalla
+
+1. `WorkoutPageComponent` llama a `store.load()`, y mientras tanto `loadStatus` vale `loading`.
+2. `LoadWorkoutUseCase` le pide los ejercicios a `WorkoutRepository`.
+3. El mock devuelve la lista en `snake_case` y el mapper la convierte a `Exercise`. A partir de aquí nadie vuelve a ver el DTO.
+4. `createSession` valida los datos y crea la sesión en `idle`.
+5. El store guarda la sesión y pasa a `ready`. La lista aparece con todo en Pendiente y nada empieza hasta que el usuario pulse Iniciar.
+
+Si la carga falla o los datos no son válidos, el store pasa a `error` y la pantalla muestra un mensaje en lugar de la sesión.
+
+### 5.2 Cuando pasa un segundo
+
+Este es el recorrido que más se repite, así que conviene que sea corto:
+
+1. `IntervalTicker` dispara el callback que le pasó el store.
+2. El store aplica `tick` y guarda la sesión nueva en su signal.
+3. Los `computed()` que dependen de ella se recalculan solos.
+4. El container entrega los valores nuevos por `input()` y Angular actualiza solo lo que cambió.
+
+Si después de un `tick` la sesión ya no está en `running`, el store detiene el `Ticker`. Nadie tiene que acordarse de pararlo al terminar el entrenamiento.
+
+### 5.3 Cuando el usuario pulsa un control
+
+`WorkoutTimerComponent` emite un `output()` y el container llama al método del store que corresponda.
+
+- **Iniciar:** aplica `start` y arranca el `Ticker`, pero solo si la sesión estaba en `idle` o `paused`. Así un doble clic no deja dos intervalos corriendo.
+- **Pausar:** aplica `pause` y detiene el `Ticker`. La sesión conserva el tiempo y las repeticiones.
+- **Reiniciar:** detiene el `Ticker` y aplica `reset`.
+
+### 5.4 Notificaciones
+
+El dominio solo deja constancia de lo que ocurrió en `lastEvent`. El container busca el texto en `workout.labels.ts` y se lo pasa a `WorkoutToastComponent`, que únicamente lo muestra. Como en la versión legacy, el mensaje se queda en pantalla hasta que lo reemplaza otro.
+
+### 5.5 Al salir de la pantalla
+
+El store se provee en el container, de modo que se destruye junto con él. En ese momento detiene el `Ticker` usando `DestroyRef`, y el intervalo no sigue vivo como pasaba antes.
+
 ## 12. Registro de decisiones
 
 ### D1. Retirada progresiva de `zone.js`
