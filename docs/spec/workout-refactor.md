@@ -73,6 +73,7 @@ El reto deja claro que prefiere poco y bien hecho antes que mucho y a medias. Po
 - Estado visible por ejercicio: Pendiente, En curso o Completado.
 - Conservar el temporizador de repetición y descanso, la notificación, el contador y los controles Iniciar, Pausar y Reiniciar.
 - Interfaz en español, con los términos que usan los criterios de aceptación (decisión D2).
+- Barra de progreso segmentada, con un tramo por repetición del ejercicio actual y el contador destacado (CA21). Se añadió después de la primera entrega (decisión D8).
 
 **Corrección de defectos (sección 1.4)**
 
@@ -107,7 +108,7 @@ Cada cosa que dejo fuera tiene su motivo:
 | Persistencia del progreso | No forma parte de los criterios de aceptación |
 | Enrutamiento | La feature tiene una sola pantalla |
 | Internacionalización | No forma parte de los criterios de aceptación y la interfaz tiene un solo idioma (decisión D2) |
-| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados y el descanso |
+| Rediseño visual | Se conservan los estilos actuales, salvo lo necesario para los estados, el descanso y la barra de progreso |
 
 ## 3. Modelo de dominio
 
@@ -384,7 +385,7 @@ Ninguno inyecta dependencias.
 
 | Componente | Recibe (`input`) | Emite (`output`) | Qué hace |
 |---|---|---|---|
-| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase y el contador, y decide qué botones mostrar según la tabla 6.3 |
+| `WorkoutTimerComponent` | Nombre del ejercicio, fase y su etiqueta, segundos restantes, segundos de ejercicio y de descanso del ejercicio actual, repeticiones hechas y totales, estado de la sesión | `start`, `pause`, `reset` | Muestra el tiempo como `mm:ss`, la fase, el contador destacado y una barra segmentada con un tramo por repetición, y decide qué botones mostrar según la tabla 6.3 |
 | `ExerciseListComponent` | Lista de ejercicios con su estado | — | Recorre la lista con `@for` |
 | `ExerciseItemComponent` | Nombre, repeticiones, estado y su etiqueta | — | Muestra un ejercicio y marca su estado con una clase CSS |
 | `WorkoutToastComponent` | Mensaje o `null` | — | Muestra la notificación, si la hay |
@@ -463,6 +464,7 @@ Salen de los defectos de la sección 1.4 y de las decisiones de diseño.
 | CA14 | Al salir de la pantalla, el temporizador se detiene | Test del store al destruirse |
 | CA15 | Si la lista está vacía o trae datos inválidos, se muestra un mensaje de error en lugar de la sesión | Tests de dominio y del caso de uso |
 | CA16 | Si la carga falla, se muestra un mensaje de error | Test del caso de uso y del store |
+| CA21 | Una barra segmentada, con un tramo por repetición del ejercicio actual, muestra el avance: los tramos completados están llenos, el actual se llena cada segundo y se completa exactamente al cerrar su repetición, y la barra vuelve a empezar en el siguiente ejercicio. El contador "1 / 3" se muestra destacado como título de la barra | Tests del temporizador y del container |
 
 ### 8.3 Criterios técnicos
 
@@ -731,3 +733,33 @@ Hay un paso intermedio que también consideraría: **NgRx SignalStore**, que man
 **Decisión.** El container muestra "Finalizado" cuando la sesión terminó, y el temporizador no aplica el estilo de descanso en ese caso. El dominio no cambia.
 
 **Justificación.** Para el dominio, la fase de una sesión terminada no tiene significado. Lo que mostrar en pantalla es responsabilidad de la presentación.
+
+### D8. Barra de progreso de repeticiones
+
+**Contexto.** Después de la primera entrega, al probar la app, la interfaz se sentía demasiado sencilla. El avance de las repeticiones solo se veía como el texto "1 / 3".
+
+**Decisión.** Una barra segmentada, con un tramo por repetición del ejercicio actual, y el contador "1 / 3" destacado como título de la barra. La cantidad de tramos ya muestra cuántas repeticiones hay, y su estado muestra cuántas van:
+
+- Los tramos de las repeticiones completadas están llenos, en verde.
+- El tramo de la repetición en curso se llena cada segundo, en azul.
+- Los tramos siguientes están vacíos.
+
+```text
+relleno del tramo actual = segundos transcurridos del ciclo / segundos del ciclo
+```
+
+El ciclo de una repetición es su tiempo de ejercicio más su descanso, porque la repetición se cuenta al terminar el descanso. Por eso el tramo se completa exactamente cuando el contador pasa, por ejemplo, de "0 / 3" a "1 / 3".
+
+Se calcula en la presentación con datos que la sesión ya tiene, así que el dominio no cambia. La barra usa `role="progressbar"` con `aria-valuenow`, `aria-valuemax` y `aria-valuetext`. Para un lector de pantalla, el valor son las repeticiones enteras, por ejemplo "1 de 3", porque anunciar un porcentaje cada segundo sería ruido.
+
+**Alternativas descartadas.**
+
+| Alternativa | Motivo |
+|---|---|
+| Barra continua a saltos por repetición | Fue la primera versión. Se veía estática varios segundos y luego saltaba un tercio de golpe |
+| Barra continua que avanza por segundos | Fue la segunda versión. Mejoraba el movimiento, pero el contador seguía siendo una línea de texto poco visible |
+| Contador grande sin barra, o puntos por repetición | Más visible, pero suma un elemento aparte en lugar de unir el conteo y el avance |
+| Progreso del tiempo de la fase actual | Repite la información del reloj y se vacía en cada fase, sin mostrar el avance del ejercicio |
+| Progreso del entrenamiento completo | Mezcla ejercicios con distinto número de repeticiones y es menos claro para el usuario |
+
+**Limitación.** Con muchas repeticiones, por ejemplo más de 15, los tramos quedarían muy finos. Con los ejercicios actuales, de 2 y 3 repeticiones, no ocurre. Si hiciera falta, la barra podría volver a ser continua a partir de cierto número de repeticiones.
