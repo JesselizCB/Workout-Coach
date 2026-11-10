@@ -23,7 +23,7 @@ npm ci
 npm start
 ```
 
-Luego abre `http://localhost:4200`.
+Luego abre `http://localhost:4200`. También puedes probarla sin instalar nada en la [demo publicada](https://jesselizcb.github.io/Workout-Coach/).
 
 ## Build y tests
 
@@ -35,7 +35,7 @@ npx ng test --watch=false --code-coverage   # tests con informe de cobertura en 
 
 ## Integración continua
 
-En cada push a `main` y en cada Pull Request, GitHub Actions instala las dependencias con `npm ci`, compila y ejecuta los tests en Chrome sin interfaz (`.github/workflows/ci.yml`). Cuando `main` pasa esas comprobaciones, la app se publica en GitHub Pages.
+En cada push a `main` y en cada Pull Request, GitHub Actions instala las dependencias con `npm ci`, compila y ejecuta los tests en Chrome sin interfaz (`.github/workflows/ci.yml`). Cuando `main` pasa esas comprobaciones, ese mismo build se publica en GitHub Pages: https://jesselizcb.github.io/Workout-Coach/
 
 ## Arquitectura
 

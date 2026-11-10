@@ -22,8 +22,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      # The base href must match the repository name, which is the GitHub Pages path.
+      - run: npm run build -- --base-href /Workout-Coach/
       - run: npx ng test --watch=false --browsers=ChromeHeadless --code-coverage
+      # Output folder set by the project name and the application builder in angular.json.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/workout-coach/browser
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -36,16 +41,5 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx ng build --base-href /Workout-Coach/
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist/workout-coach/browser
       - id: deployment
         uses: actions/deploy-pages@v4

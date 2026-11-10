@@ -606,9 +606,9 @@ Medido en la rama `feat/repetition-progress`, después de añadir la barra de la
 
 ### 10.9 Integración continua y demo publicada
 
-Para que la evidencia no dependa de estas tablas, `.github/workflows/ci.yml` ejecuta en GitHub los mismos comandos en cada push a `main` y en cada Pull Request: `npm ci`, `npm run build` y los tests en Chrome sin interfaz, con informe de cobertura. Los resultados y sus logs quedan en la pestaña Actions del repositorio.
+Para que la evidencia no dependa de estas tablas, `.github/workflows/ci.yml` ejecuta en GitHub los mismos comandos en cada push a `main` y en cada Pull Request: `npm ci`, el build y los tests en Chrome sin interfaz. Los resultados, incluido el resumen de cobertura, quedan en los logs de la pestaña Actions del repositorio.
 
-Cuando `main` pasa esas comprobaciones, el mismo workflow publica la app en GitHub Pages: https://jesselizcb.github.io/Workout-Coach/. La app no tiene backend ni rutas, así que funciona completa como sitio estático. Solo hace falta compilar con `--base-href /Workout-Coach/`.
+La app se compila una sola vez, con `--base-href /Workout-Coach/`, y ese mismo build es el que se prueba y el que se publica. Cuando `main` pasa las comprobaciones, el workflow lo despliega en GitHub Pages: https://jesselizcb.github.io/Workout-Coach/. La app no tiene backend ni rutas, así que funciona completa como sitio estático.
 
 ## 11. Extensión: microfrontends y NgRx
 
