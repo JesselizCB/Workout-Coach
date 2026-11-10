@@ -150,6 +150,7 @@ interface WorkoutSession {
 Una sesión solo se puede crear con datos válidos. Si algo no cuadra, se lanza un error de dominio y la sesión no llega a existir:
 
 - La lista contiene al menos un ejercicio.
+- Cada ejercicio tiene un nombre que no está vacío ni formado solo por espacios.
 - `repetitions`, `repetitionSeconds` y `restSeconds` son enteros mayores o iguales a 1.
 
 ### 3.3 Operaciones

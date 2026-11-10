@@ -130,6 +130,9 @@ function currentExercise(session: WorkoutSession): Exercise {
 }
 
 function assertValidExercise(exercise: Exercise): void {
+  if (exercise.name.trim() === '') {
+    throw new InvalidWorkoutError('Every exercise needs a name.');
+  }
   for (const field of POSITIVE_INTEGER_FIELDS) {
     const value = exercise[field];
     if (!Number.isInteger(value) || value < 1) {

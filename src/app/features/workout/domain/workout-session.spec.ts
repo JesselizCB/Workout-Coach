@@ -42,6 +42,12 @@ describe('createSession', () => {
     expect(() => createSession([squats, invalid])).toThrowError(InvalidWorkoutError);
   });
 
+  for (const name of ['', '   ']) {
+    it(`CA15: rejects an exercise named ${JSON.stringify(name)}`, () => {
+      expect(() => createSession([{ ...squats, name }])).toThrowError(InvalidWorkoutError);
+    });
+  }
+
   const numericFields = ['repetitions', 'repetitionSeconds', 'restSeconds'] as const;
   const invalidValues = [0, -1, 1.5, Number.NaN];
 
