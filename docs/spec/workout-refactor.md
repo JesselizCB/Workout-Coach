@@ -489,7 +489,7 @@ Los puertos de la sección 4.3 son los que permiten reemplazar las piezas difíc
 
 ### 9.3 Componentes y zoneless
 
-En los tests de componentes paso los datos con `fixture.componentRef.setInput()` y espero el render con `await fixture.whenStable()`. Funcionan igual con `zone.js` y sin él, de modo que el bloque W6 no obliga a reescribirlos. En W6 se agrega `provideZonelessChangeDetection()` a la configuración de TestBed, para que los tests se ejecuten en el mismo modo que la app.
+En los tests de componentes paso los datos con `fixture.componentRef.setInput()`, activo `fixture.autoDetectChanges()` y espero el render con `await fixture.whenStable()`. Con `zone.js`, `whenStable()` por sí solo no ejecuta la detección de cambios, y el primer test de componente falló justamente por eso. Con la detección automática activada, los tests funcionan igual con `zone.js` y sin él, de modo que el bloque W6 no obliga a reescribirlos. En W6 se agrega `provideZonelessChangeDetection()` a la configuración de TestBed, para que los tests se ejecuten en el mismo modo que la app.
 
 ### 9.4 Trazabilidad y cobertura
 

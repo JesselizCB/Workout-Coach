@@ -25,6 +25,8 @@ export const WORKOUT_TEXTS = {
   pause: 'Pausar',
   reset: 'Reiniciar',
   completedRepetitions: 'Repeticiones completadas',
+  repetition: 'repetición',
+  repetitions: 'repeticiones',
   loading: 'Cargando entrenamiento…',
   loadError: 'No se pudo cargar el entrenamiento. Inténtalo de nuevo más tarde.',
 } as const;
