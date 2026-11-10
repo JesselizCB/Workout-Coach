@@ -37,6 +37,8 @@ import {
               [phase]="session.phase"
               [phaseLabel]="phaseLabel()"
               [remainingSeconds]="session.remainingSeconds"
+              [repetitionSeconds]="session.exercises[session.currentIndex].repetitionSeconds"
+              [restSeconds]="session.exercises[session.currentIndex].restSeconds"
               [completedRepetitions]="session.completedRepetitions"
               [totalRepetitions]="session.exercises[session.currentIndex].repetitions"
               [status]="session.status"

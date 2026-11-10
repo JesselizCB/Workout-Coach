@@ -589,6 +589,18 @@ Cada tramo de código se pasó por una revisión automática independiente, cent
 | W5. Retirada del legacy | `6ec0966` |
 | W6. Zoneless | `0bc354b` a `aac8343` |
 
+### 10.8 Actualización: barra de progreso (CA21)
+
+Medido en la rama `feat/repetition-progress`, después de añadir la barra de la decisión D8.
+
+| Comprobación | Resultado |
+|---|---|
+| `npm test` | 117 tests en verde |
+| Cobertura | 99,44 % de sentencias (180 de 181), 93,87 % de ramas (46 de 49), 100 % de funciones (55 de 55), 99,4 % de líneas (167 de 168) |
+| Total transferido | 39,12 kB, 0,63 kB más que sin la barra |
+| Navegador, segunda repetición de Squats | Contador "1 / 3", primer tramo completo en verde, segundo al 38 % y tercero vacío |
+| Navegador, al pasar a Push-ups | Contador "0 / 2" y dos tramos vacíos |
+
 ## 11. Extensión: microfrontends y NgRx
 
 Esta sección es solo de diseño. Describe cómo evolucionaría la feature si tuviera que vivir dentro de una plataforma más grande, repartida entre varios equipos. Nada de esto se implementa en el reto.

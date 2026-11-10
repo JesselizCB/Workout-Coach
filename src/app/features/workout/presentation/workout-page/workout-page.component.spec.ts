@@ -98,6 +98,21 @@ describe('WorkoutPageComponent', () => {
     expect(button('Iniciar')?.disabled).toBeTrue();
   });
 
+  it('CA21: fills the progress bar with each repetition and restarts it for the next exercise', async () => {
+    const twoReps: Exercise = { name: 'Two reps', repetitions: 2, repetitionSeconds: 1, restSeconds: 1 };
+    const oneRep: Exercise = { name: 'One rep', repetitions: 1, repetitionSeconds: 1, restSeconds: 1 };
+    await renderWorkout([twoReps, oneRep]);
+    const progress = () => element.querySelector('[role="progressbar"]');
+    await click('Iniciar');
+
+    await advance(2);
+    expect(progress()?.getAttribute('aria-valuetext')).toBe('1 de 2');
+
+    await advance(2);
+    expect(textOf('.timer__exercise')).toBe('One rep');
+    expect(progress()?.getAttribute('aria-valuetext')).toBe('0 de 1');
+  });
+
   it('CA8: resetting returns to the initial screen', async () => {
     await renderWorkout();
     await click('Iniciar');
