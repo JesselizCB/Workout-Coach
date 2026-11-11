@@ -131,6 +131,22 @@ describe('WorkoutTimerComponent', () => {
       expect(text('.progress__count')).toBe('1 / 3');
     });
 
+    it('CA11: colors the current segment like the rest phase while resting', async () => {
+      await render({ completedRepetitions: 1, totalRepetitions: 3, phase: 'rest', remainingSeconds: 2 });
+
+      expect(segments().map((segment) => segment.classList.contains('progress__segment--rest'))).toEqual([
+        false,
+        true,
+        false,
+      ]);
+
+      fixture.componentRef.setInput('phase', 'repetition');
+      fixture.componentRef.setInput('remainingSeconds', 5);
+      await fixture.whenStable();
+
+      expect(element.querySelector('.progress__segment--rest')).toBeNull();
+    });
+
     it('CA21: fills every segment when the workout is finished', async () => {
       await render({ completedRepetitions: 3, totalRepetitions: 3, phase: 'rest', remainingSeconds: 0, status: 'finished' });
 
@@ -178,11 +194,13 @@ describe('WorkoutTimerComponent', () => {
       await render({ status: 'idle' });
       expect(button('Iniciar')?.classList).toContain('button--primary');
       expect(button('Reiniciar')?.classList).toContain('button--secondary');
+    });
 
-      fixture.componentRef.setInput('status', 'running');
-      await fixture.whenStable();
+    it('styles pause differently from start, so the two actions are not confused', async () => {
+      await render({ status: 'running' });
 
-      expect(button('Pausar')?.classList).toContain('button--primary');
+      expect(button('Pausar')?.classList).toContain('button--pause');
+      expect(button('Pausar')?.classList).not.toContain('button--primary');
       expect(button('Reiniciar')?.classList).toContain('button--secondary');
     });
 
