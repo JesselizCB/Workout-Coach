@@ -458,7 +458,7 @@ Salen de los defectos de la sección 1.4 y de las decisiones de diseño.
 |---|---|---|
 | CA9 | Con el entrenamiento terminado, Iniciar está deshabilitado y un `start` no cambia la sesión | Test de dominio y test del componente del temporizador |
 | CA10 | El tiempo se muestra como `mm:ss`, por ejemplo 90 segundos como `01:30` | Test de la función de formato |
-| CA11 | La fase de descanso se distingue visualmente de la de ejercicio | Prueba manual |
+| CA11 | La fase de descanso se distingue visualmente de la de ejercicio: la fase, el reloj y el tramo actual de la barra se muestran en dorado | Test del temporizador y prueba manual |
 | CA12 | La notificación cambia al empezar un descanso, al volver al ejercicio, al completar un ejercicio y al terminar el entrenamiento | Test de dominio sobre `lastEvent` y prueba manual |
 | CA13 | Pulsar Iniciar dos veces seguidas no acelera el temporizador | Test del store con un `Ticker` falso |
 | CA14 | Al salir de la pantalla, el temporizador se detiene | Test del store al destruirse |
@@ -595,10 +595,11 @@ Medido en la rama `feat/repetition-progress`, después de añadir la barra de la
 
 | Comprobación | Resultado |
 |---|---|
-| `npm test` | 118 tests en verde |
+| `npm test` | 120 tests en verde |
 | Cobertura | 99,44 % de sentencias (180 de 181), 93,87 % de ramas (46 de 49), 100 % de funciones (55 de 55), 99,4 % de líneas (167 de 168) |
-| Total transferido | 39,30 kB, 0,81 kB más que antes de la barra y los botones |
-| Contraste de los botones | Texto blanco sobre azul: 4,63:1, por encima del 4,5:1 de WCAG AA |
+| Total transferido | 39,34 kB, 0,85 kB más que antes de la barra y los botones |
+| Contraste de los botones | Iniciar 4,63:1 y Pausar 8,75:1, por encima del 4,5:1 de WCAG AA |
+| Navegador, durante un descanso | Fase, reloj y tramo actual en dorado, y Pausar en ámbar |
 | Navegador, pantalla inicial | Iniciar en azul como acción principal y Reiniciar con borde como secundaria |
 | Navegador, al terminar | Todos los tramos en verde, contador "2 / 2" e Iniciar deshabilitado en gris |
 | Navegador, segunda repetición de Squats | Contador "1 / 3", primer tramo completo en verde, segundo al 38 % y tercero vacío |
@@ -789,6 +790,16 @@ Se calcula en la presentación con datos que la sesión ya tiene, así que el do
 
 **Contexto.** Los tres botones usaban el estilo por defecto del navegador, así que Reiniciar, que borra todo el progreso, pesaba visualmente lo mismo que la acción principal.
 
-**Decisión.** Iniciar y Pausar se muestran como acción principal, en azul con texto blanco (contraste 4,63:1, por encima del 4,5:1 de WCAG AA). Reiniciar se muestra como acción secundaria, con borde y sin relleno. Todos tienen un foco visible al navegar con teclado. Los estilos viven dentro del temporizador, sin tocar el CSS global.
+**Decisión.** Cada control tiene un color con significado:
+
+| Control | Estilo | Contraste |
+|---|---|---|
+| Iniciar | Azul con texto blanco | 4,63:1 |
+| Pausar | Ámbar con texto oscuro, el mismo tono que marca el descanso: los dos significan "en espera" | 8,75:1 |
+| Reiniciar | Borde azul sin relleno, como acción secundaria | 4,63:1 |
+
+Todos los contrastes superan el 4,5:1 de WCAG AA. El texto blanco sobre ámbar no lo alcanzaba (3,68:1), por eso Pausar usa texto oscuro. Todos los botones tienen un foco visible al navegar con teclado, en un tono oscuro que se distingue también sobre el botón ámbar. Los estilos viven dentro del temporizador, sin tocar el CSS global.
+
+En una primera versión, Iniciar y Pausar compartían el mismo azul. Al probar la app se veía confuso, porque el botón cambiaba de función sin cambiar de aspecto.
 
 **Justificación.** No es un rediseño: da jerarquía a las acciones y reduce el riesgo de reiniciar por error.

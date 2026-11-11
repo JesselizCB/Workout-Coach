@@ -30,7 +30,11 @@ interface ProgressSegment {
       [attr.aria-label]="texts.repetitionProgress"
     >
       @for (segment of segments(); track $index) {
-        <div class="progress__segment" [class.progress__segment--done]="segment.done">
+        <div
+          class="progress__segment"
+          [class.progress__segment--done]="segment.done"
+          [class.progress__segment--rest]="resting() && $index === completedRepetitions()"
+        >
           <div class="progress__fill" [style.width.%]="segment.fill"></div>
         </div>
       }
@@ -38,7 +42,7 @@ interface ProgressSegment {
 
     <div class="timer__controls">
       @if (status() === 'running') {
-        <button type="button" class="button button--primary" (click)="pause.emit()">{{ texts.pause }}</button>
+        <button type="button" class="button button--pause" (click)="pause.emit()">{{ texts.pause }}</button>
       } @else {
         <button
           type="button"
@@ -82,6 +86,7 @@ interface ProgressSegment {
       transition: width 0.4s ease;
     }
     .progress__segment--done .progress__fill { background: #1e8449; }
+    .progress__segment--rest .progress__fill { background: #b9770e; }
     .timer__controls { display: flex; gap: 0.5rem; }
     .button {
       margin: 0;
@@ -94,6 +99,8 @@ interface ProgressSegment {
     }
     .button--primary { background: #1f6feb; color: #ffffff; }
     .button--primary:hover:not(:disabled) { background: #1a5fd0; border-color: #1a5fd0; }
+    .button--pause { background: #f5b041; border-color: #f5b041; color: #17202a; }
+    .button--pause:hover { background: #e59d2c; border-color: #e59d2c; }
     .button--secondary { background: #ffffff; color: #1f6feb; }
     .button--secondary:hover { background: #e8f4ff; }
     .button:disabled {
@@ -102,7 +109,7 @@ interface ProgressSegment {
       color: #6b7682;
       cursor: not-allowed;
     }
-    .button:focus-visible { outline: 3px solid #f5b041; outline-offset: 2px; }
+    .button:focus-visible { outline: 3px solid #17202a; outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       .progress__fill { transition: none; }
     }
